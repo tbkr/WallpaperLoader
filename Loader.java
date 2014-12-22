@@ -1,16 +1,18 @@
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.URL;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.LinkedList;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 
 public class Loader {
 
@@ -47,9 +49,8 @@ public class Loader {
 	private int minNumberOfTags;
 
 
-	
-	public Loader() {
 
+	public Loader() {
 		String[] preferedToken = {"abstract", "sunset", "mountains", "landscape",
 				"skyscape", "cityscape", "landscapes", "cityscapes", "graph",
 				"computer science", "stars", "outer space", "galaxies",
@@ -57,9 +58,8 @@ public class Loader {
 				"depth of field", "skyscape", "shadow", "clouds", "bokeh", "lenses",
 				"wireframes", "wireframe", "science", "minimal", "minimalism", "space",
 				"skies", "macro", "closeup"};
-		
-		setPreferedToken(preferedToken);
 
+		setPreferedToken(preferedToken);
 	}
 
 
@@ -73,7 +73,6 @@ public class Loader {
 		if(token != null) {
 			setPreferedToken(token);
 		}
-
 	}
 
 	/**
@@ -84,20 +83,17 @@ public class Loader {
 	 * @param threshhold
 	 */
 	public Loader(String[] token, int threshhold) {
-
 		if(threshhold >= 0) {
 			this.minNumberOfTags = threshhold;
 		} else {
 			System.out.println("Ignoring negative number of prefered tags, downloading every image!");
 			this.minNumberOfTags = 0;
 		}
-		
-		if (token != null) {
 
+		if (token != null) {
 			for (String t : token) {
 				this.preferedToken.add(t.toLowerCase());
 			}
-
 		}
 
 		if (!this.downloadPath.exists()) {
@@ -107,28 +103,27 @@ public class Loader {
 		System.out.println("Starting toplist search... Saving to "
 				+ downloadPath);
 		findNewWallpaperOnHotPage();
-
 	}
 
-	/** 
+	/**
 	 * Setter method for the prefered token list
 	 * @param preferedToken
 	 * void
 	 */
 	public void setPreferedToken(String[] preferedToken) {
-		
+
 		for(String token : preferedToken) {
 			this.preferedToken.add(token);
 		}
 	}
-	
+
 	public void setMinNumberOfTags(int threshold) {
-		this.minNumberOfTags = threshold; 
+		this.minNumberOfTags = threshold;
 	}
-	
+
 	public void setDownloadPath(String downloadPath) {
 		File newDownloadPath = new File(downloadPath);
-		
+
 		if(newDownloadPath.exists() && newDownloadPath.isDirectory()) {
 			this.downloadPath = newDownloadPath;
 		} else {
@@ -141,17 +136,15 @@ public class Loader {
 		}
 	}
 
-	
+
 	/**
 	 * Starts parsing the "hotpage" of wallhaven.cc. This is the latest site
 	 * sorted after SFW and views of the images.
 	 */
 	private void findNewWallpaperOnHotPage() {
-
 		String parsingURL = mainSiteURL + searchSubString + categoriesSubString
 				+ concatSubString + puritySubString + concatSubString
 				+ sortingSubString + concatSubString + orderSubString;
-
 
 		for (File f : this.downloadPath.listFiles(new JPGAndPNGFileFilter())) {
 			// Add the names to the idList (the names are the ids of the images)
@@ -159,46 +152,49 @@ public class Loader {
 			this.idList.add(Integer.parseInt(fileName.substring(0, fileName.length() - 4)));
 		}
 
-		// TODO: Figure out a way to get the maximum index
-		for (int index = 0; index < 3000000; ++index) {
+		// try to get total number of pages
+		int lastPage;
+		try {
+			Document doc = Jsoup.connect(
+					parsingURL + concatSubString + siteSubString + 1).get();
+			lastPage = Integer.parseInt(doc
+					.select("span[class=thumb-listing-page-total]").first()
+					.text().substring(2));
+		} catch (Exception e) {
+			lastPage = 3000000;
+		}
+
+		for (int index = 1; index < lastPage; ++index) {
 			try {
+				Document doc = Jsoup.connect(
+						parsingURL + concatSubString + siteSubString + index)
+						.get();
 
-				URL hotPage = new URL(parsingURL + concatSubString + siteSubString
-						+ index);
-				String[] content = getURLContentAsStringArray(hotPage);
-
-				LinkedList<Integer> currentImageIdsOnPage = getImageIdsFromContent(content);
-
-				for (Integer id : currentImageIdsOnPage) {
-
+				for (Integer id : getImageIdsFromContent(doc)) {
 					if (!alreadyDownloaded(id)) {
-						loadImage(new Image(content, id));
+						loadImage(new Image(id));
 					} else {
-						System.out.println("Already owning Image with Id:"
-								+ id);
+						System.out
+								.println("Already owning Image with Id:" + id);
 					}
 				}
 
 				System.out.println("Current Page:" + index);
-
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
 
 	}
 
-
 	/**
 	 * Check whether a given id has already been downloaded and return the
 	 * the result.
 	 * @param id
-	 * @return 
+	 * @return
 	 * boolean
 	 */
 	private boolean alreadyDownloaded(Integer id) {
-
 		for (int i : this.idList) {
 			if (i == id) {
 				return true;
@@ -208,77 +204,16 @@ public class Loader {
 		return false;
 	}
 
-	/**
-	 * Check the given string array for appearance of image ids and
-	 * return them as an integer list.
-	 * @param content
-	 * @return
-	 * LinkedList<Integer>
-	 */
-	private LinkedList<Integer> getImageIdsFromContent(String[] content) {
-		
+	private LinkedList<Integer> getImageIdsFromContent(Document doc) {
 		LinkedList<Integer> ids = new LinkedList<>();
 
-		// Each image is assumed to be 15 lines long
-		for (int i = 0; i < content.length; ++i) {
-			
-			content[i] = content[i].trim();
-			
-			if(content[i].startsWith("><a class=\"preview\" href=\"")){
-				String[] parts = content[i].split("/");
-				
-				String imageId = parts[parts.length - 1];
-				// Trim of the quote
-				imageId = imageId.substring(0, imageId.length() - 1);
-				
-				ids.push(new Integer(imageId));
-			}
+		for (Element el : doc.body().select("a[class=preview]")) {
+			String url = el.attr("href");
+			String id = url.substring(url.lastIndexOf('/') + 1, url.length());
+			ids.push(new Integer(id));
 		}
-		
+
 		return ids;
-	}
-
-	/**
-	 * Return the homepage located at <em>url<em> and save its content as a 
-	 * String array.
-	 * @param url
-	 * @return String[]
-	 */
-	public static String[] getURLContentAsStringArray(URL url) {
-		StringBuffer content = new StringBuffer();
-
-		try {
-			
-			BufferedReader bf = new BufferedReader(new InputStreamReader(
-					url.openStream()));
-
-			while (bf.ready()) {
-				content.append(bf.readLine());
-				content.append("\n");
-
-				// Handle latency
-				if (!bf.ready()) {
-					Thread.sleep(5);
-				}
-			}
-
-			bf.close();
-
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			System.err.println("Can't open String to URL:" + url.getFile());
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		String[] res = content.toString().split("\n");
-		
-		for(int i = 0; i < res.length; ++i)
-			res[i] = res[i].trim();
-
-		return res;
 	}
 
 	/**
@@ -288,12 +223,10 @@ public class Loader {
 	 * @return void
 	 */
 	private void loadImage(Image img) {
-
 		int priority = 0;
 		int id = 0;
 
 		if (img.filePath != null) {
-
 			// Decide whether a site contains correct token (image description)
 			priority = calculatePriority(img.tagList);
 
@@ -327,8 +260,8 @@ public class Loader {
 	 * @throws IOException
 	 */
 	private void downloadImage(Image img) throws IOException {
-
 		URL url = new URL(img.filePath);
+
 		InputStream is = url.openStream();
 		OutputStream os = new FileOutputStream(
 				this.downloadPath.getAbsolutePath() + File.separator
@@ -343,11 +276,9 @@ public class Loader {
 
 		is.close();
 		os.close();
-
 	}
 
 	private int calculatePriority(ArrayList<String> tagList) {
-
 		int feasibleToken = 0;
 
 		for (String token : tagList) {
@@ -359,11 +290,10 @@ public class Loader {
 		return feasibleToken;
 	}
 
-	private void printInformation(int priority, long id,
-			boolean b) {
+	private void printInformation(int priority, long id, boolean b) {
 
-			System.out.print("Current Image has ID:" + id 
-					+  ", Priority: " + priority);
+		System.out.print("Current Image has ID:" + id + ", Priority: "
+				+ priority);
 
 		System.out
 				.println(" "
