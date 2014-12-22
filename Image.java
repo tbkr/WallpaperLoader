@@ -17,7 +17,14 @@ public class Image {
 	int height;
 
 
+	/**
+	 * Constructor for a website which holds the link to the image with id <em>id<em>
+	 * @param lines
+	 * @param id
+	 */
 	public Image(String[] lines, Integer id) {
+		
+		this.id = id;
 		
 		for(int i = 0; i < lines.length; ++i) {
 			
@@ -60,14 +67,6 @@ public class Image {
 				// Set filename correctly
 				this.fileName = this.filePath.split("-")[1]; 
 				System.out.println("Fount download link: " + filePath);
-				continue;
-			}
-			if(lines[i].contains("data-wallpaper-id=")) {
-				
-				// The part in quotation marks
-				String parts[] = lines[i].split("\"");
-				
-				id = Integer.parseInt(parts[1]);
 				continue;
 			}
 			if(lines[i].contains("data-wallpaper-width=")) {

@@ -14,6 +14,22 @@ import java.util.LinkedList;
 
 public class Loader {
 
+	/**
+	 * An simple class for filtering jpg and png files
+	 * @author Tobias Kremer
+	 */
+	private class JPGAndPNGFileFilter implements FileFilter{
+
+		@Override
+		public boolean accept(File arg0) {
+
+			if (arg0.getName().endsWith(".jpg")
+					|| arg0.getName().endsWith(".png"))
+				return true;
+			return false;
+		}
+	}
+
 	private String mainSiteURL = new String("http://alpha.wallhaven.cc");
 	private String searchSubString = new String("/search?");
 	private String categoriesSubString = new String("categories=111");
@@ -30,6 +46,8 @@ public class Loader {
 	private ArrayList<String> preferedToken = new ArrayList<>();
 	private int threshold;
 
+
+	
 	public Loader() {
 
 		this(new String[] { "abstract", "sunset", "mountains", "landscape",
@@ -39,18 +57,28 @@ public class Loader {
 				"depth of field", "skyscape", "shadow", "clouds", "bokeh", "lenses",
 				"wireframes", "wireframe", "science", "minimal", "minimalism", "space",
 				"skies", "macro", "closeup"
-				
-
 		});
 
 	}
 
+	/**
+	 * Constructor taking an array of strings as tags. These tags are preferred and will
+	 * be used to decide whether an image is "prefered" or not.
+	 * @param token
+	 */
 	public Loader(String[] token) {
 
 		this(token, 1);
 
 	}
 
+	/**
+	 * Constructor taking an array of strings as tags. These tags are preferred and will
+	 * be used to decide whether an image is "prefered" or not. The threshhold is the number
+	 * of prefered tags an image has to have to get downloaded.
+	 * @param token
+	 * @param threshhold
+	 */
 	public Loader(String[] token, int threshhold) {
 
 		this.threshold = threshhold;
@@ -63,7 +91,6 @@ public class Loader {
 
 		}
 
-		// If there isn't a history, make the directory
 		if (!this.downloadLocation.exists()) {
 			this.downloadLocation.mkdir();
 		}
@@ -76,10 +103,7 @@ public class Loader {
 
 	/**
 	 * Starts parsing the "hotpage" of wallhaven.cc. This is the latest site
-	 * sorted after SFW and Views of the images.
-	 * 
-	 * @param maxId
-	 *            void
+	 * sorted after SFW and views of the images.
 	 */
 	private void findNewWallpaperOnHotPage() {
 
@@ -87,32 +111,18 @@ public class Loader {
 				+ concatSubString + puritySubString + concatSubString
 				+ sortingSubString + concatSubString + orderSubString;
 
-		URL hotPage = null;
 
-		// Create a new FileFilter for jpg and png files
-		for (File f : this.downloadLocation.listFiles(new FileFilter() {
-
-			@Override
-			public boolean accept(File arg0) {
-
-				if (arg0.getName().endsWith(".jpg")
-						|| arg0.getName().endsWith(".png"))
-					return true;
-				return false;
-			}
-		})) {
+		for (File f : this.downloadLocation.listFiles(new JPGAndPNGFileFilter())) {
 			// Add the names to the idList (the names are the ids of the images)
-			// TODO: Better solution: Ignore the last four characters for
-			// ending...
-			this.idList.add(Integer.parseInt(f.getName().substring(0,
-					f.getName().length() - 4)));
+			String fileName = f.getName();
+			this.idList.add(Integer.parseInt(fileName.substring(0, fileName.length() - 4)));
 		}
 
 		// TODO: Figure out a way to get the maximum index
 		for (int index = 0; index < 3000000; ++index) {
 			try {
 
-				hotPage = new URL(parsingURL + concatSubString + siteSubString
+				URL hotPage = new URL(parsingURL + concatSubString + siteSubString
 						+ index);
 				String[] content = getURLContentAsStringArray(hotPage);
 
@@ -139,7 +149,13 @@ public class Loader {
 	}
 
 
-
+	/**
+	 * Check whether a given id has already been downloaded and return the
+	 * the result.
+	 * @param id
+	 * @return 
+	 * boolean
+	 */
 	private boolean alreadyDownloaded(Integer id) {
 
 		for (int i : this.idList) {
@@ -151,6 +167,13 @@ public class Loader {
 		return false;
 	}
 
+	/**
+	 * Check the given string array for appearance of image ids and
+	 * return them as an integer list.
+	 * @param content
+	 * @return
+	 * LinkedList<Integer>
+	 */
 	private LinkedList<Integer> getImageIdsFromContent(String[] content) {
 		
 		LinkedList<Integer> ids = new LinkedList<>();
@@ -174,10 +197,17 @@ public class Loader {
 		return ids;
 	}
 
+	/**
+	 * Return the homepage located at <em>url<em> and save its content as a 
+	 * String array.
+	 * @param url
+	 * @return String[]
+	 */
 	public static String[] getURLContentAsStringArray(URL url) {
 		StringBuffer content = new StringBuffer();
 
 		try {
+			
 			BufferedReader bf = new BufferedReader(new InputStreamReader(
 					url.openStream()));
 
@@ -210,11 +240,16 @@ public class Loader {
 		return res;
 	}
 
+	/**
+	 * Check the filePath and the priority and download the image if
+	 * the priority is larger or equals the threshold.
+	 * @param img
+	 * @return void
+	 */
 	private void loadImage(Image img) {
 
 		int priority = 0;
 		int id = 0;
-		String filetype = "unkown (not calculated because under t) ";
 
 		if (img.filePath != null) {
 
@@ -245,6 +280,11 @@ public class Loader {
 
 	}
 
+	/**
+	 * Downloads the image to the download location
+	 * @param img
+	 * @throws IOException
+	 */
 	private void downloadImage(Image img) throws IOException {
 
 		URL url = new URL(img.filePath);
