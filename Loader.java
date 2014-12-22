@@ -1,10 +1,8 @@
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.URL;
 import java.sql.Timestamp;
@@ -51,18 +49,15 @@ public class Loader {
 	private int minNumberOfTags;
 
 	public Loader() {
-
-		String[] preferedToken = { "abstract", "sunset", "mountains",
-				"landscape", "skyscape", "cityscape", "landscapes",
-				"cityscapes", "graph", "computer science", "stars",
-				"outer space", "galaxies", "beach", "beaches", "water",
-				"nature", "fields", "sunlight", "depth of field", "skyscape",
-				"shadow", "clouds", "bokeh", "lenses", "wireframes",
-				"wireframe", "science", "minimal", "minimalism", "space",
-				"skies", "macro", "closeup" };
+		String[] preferedToken = {"abstract", "sunset", "mountains", "landscape",
+				"skyscape", "cityscape", "landscapes", "cityscapes", "graph",
+				"computer science", "stars", "outer space", "galaxies",
+				"beach", "beaches", "water", "nature", "fields", "sunlight",
+				"depth of field", "skyscape", "shadow", "clouds", "bokeh", "lenses",
+				"wireframes", "wireframe", "science", "minimal", "minimalism", "space",
+				"skies", "macro", "closeup"};
 
 		setPreferedToken(preferedToken);
-
 	}
 
 	/**
@@ -76,7 +71,6 @@ public class Loader {
 		if (token != null) {
 			setPreferedToken(token);
 		}
-
 	}
 
 	/**
@@ -99,11 +93,9 @@ public class Loader {
 		}
 
 		if (token != null) {
-
 			for (String t : token) {
 				this.preferedToken.add(t.toLowerCase());
 			}
-
 		}
 
 		if (!this.downloadPath.exists()) {
@@ -160,19 +152,25 @@ public class Loader {
 					fileName.length() - 4)));
 		}
 
-		// TODO: Figure out a way to get the maximum index
-		for (int index = 0; index < 3000000; ++index) {
+		// try to get total number of pages
+		int lastPage;
+		try {
+			Document doc = Jsoup.connect(
+					parsingURL + concatSubString + siteSubString + 1).timeout(1000).get();
+			lastPage = Integer.parseInt(doc
+					.select("span[class=thumb-listing-page-total]").first()
+					.text().substring(2));
+		} catch (Exception e) {
+			lastPage = 3000000;
+		}
+
+		for (int index = 1; index < lastPage; ++index) {
 			try {
+				Document doc = Jsoup.connect(
+						parsingURL + concatSubString + siteSubString + index)
+						.get();
 
-				Document page = Jsoup
-						.connect(
-								parsingURL + concatSubString + siteSubString
-										+ index).timeout(1000).get();
-
-				LinkedList<Integer> currentImageIdsOnPage = getImageIdsFromDocument(page);
-
-				for (Integer id : currentImageIdsOnPage) {
-
+				for (Integer id : getImageIdsFromContent(doc)) {
 					if (!alreadyDownloaded(id)) {
 						loadImage(new Image(id));
 					} else {
@@ -182,9 +180,7 @@ public class Loader {
 				}
 
 				System.out.println("Current Page:" + index);
-
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
@@ -196,10 +192,10 @@ public class Loader {
 	 * result.
 	 * 
 	 * @param id
-	 * @return boolean
+	 * @return
+	 * boolean
 	 */
 	private boolean alreadyDownloaded(Integer id) {
-
 		for (int i : this.idList) {
 			if (i == id) {
 				return true;
@@ -209,55 +205,16 @@ public class Loader {
 		return false;
 	}
 
-	/**
-	 * Check the given string array for appearance of image ids and return them
-	 * as an integer list.
-	 * 
-	 * @param content
-	 * @return LinkedList<Integer>
-	 */
-	private LinkedList<Integer> getImageIdsFromDocument(Document doc) {
-
+	private LinkedList<Integer> getImageIdsFromContent(Document doc) {
 		LinkedList<Integer> ids = new LinkedList<>();
 
-		for (Element element : doc.body().select("[class=preview]")) {
-
-			String url = element.attr("href");
+		for (Element el : doc.body().select("a[class=preview]")) {
+			String url = el.attr("href");
 			String id = url.substring(url.lastIndexOf('/') + 1, url.length());
 			ids.push(new Integer(id));
-
 		}
 
 		return ids;
-	}
-
-	/**
-	 * Return the homepage located at <em>url<em> and save its content as a 
-	 * String array.
-	 * 
-	 * @param url
-	 * @return String[]
-	 */
-	public static String getURLContentAsStringArray(URL url) {
-
-		StringBuffer content = new StringBuffer();
-		try {
-
-			BufferedReader in = new BufferedReader(new InputStreamReader(
-					url.openStream()));
-
-			String inputLine;
-			while ((inputLine = in.readLine()) != null)
-				content.append(inputLine);
-			in.close();
-
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			System.err.println("Can't open String to URL:" + url.getFile());
-			e.printStackTrace();
-		}
-
-		return content.toString();
 	}
 
 	/**
@@ -268,12 +225,10 @@ public class Loader {
 	 * @return void
 	 */
 	private void loadImage(Image img) {
-
 		int priority = 0;
 		int id = 0;
 
 		if (img.filePath != null) {
-
 			// Decide whether a site contains correct token (image description)
 			priority = calculatePriority(img.tagList);
 
@@ -308,8 +263,8 @@ public class Loader {
 	 * @throws IOException
 	 */
 	private void downloadImage(Image img) throws IOException {
-
 		URL url = new URL(img.filePath);
+
 		InputStream is = url.openStream();
 		OutputStream os = new FileOutputStream(
 				this.downloadPath.getAbsolutePath() + File.separator
@@ -324,11 +279,9 @@ public class Loader {
 
 		is.close();
 		os.close();
-
 	}
 
 	private int calculatePriority(ArrayList<String> tagList) {
-
 		int feasibleToken = 0;
 
 		for (String token : tagList) {

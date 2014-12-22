@@ -1,15 +1,10 @@
-import java.lang.reflect.Array;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
 public class Image {
-
 	public String imagePath;
 	public String filePath;
 	public String fileName;
@@ -21,23 +16,17 @@ public class Image {
 	int height;
 
 	/**
-	 * Constructor for a website which holds the link to the image with id
-	 * <em>id<em>
-	 * 
-	 * @param lines
+	 * Constructor for a website which holds the link to the image with id <em>id<em>
 	 * @param id
 	 */
 	public Image(Integer id) {
-
 		this.id = id;
-		this.imagePath = "http://alpha.wallhaven.cc/wallpaper/" + id;
+		imagePath = "http://alpha.wallhaven.cc/wallpaper/" + id;
 		collectFurtherInformationForImage(imagePath);
 	}
 
 	private void collectFurtherInformationForImage(String imagePath) {
 		// TODO Auto-generated method stub
-		String[] content = null;
-
 		try {
 			Document page = Jsoup.connect(imagePath).timeout(1000).get();
 			parseImagePage(page);
@@ -45,7 +34,6 @@ public class Image {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-
 	}
 
 	private void parseImagePage(Document doc) throws Exception {
@@ -62,7 +50,5 @@ public class Image {
 			tagList.add(el.text());
 		}
 		System.out.println("Found download link: " + filePath);
-
 	}
-
 }
