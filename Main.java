@@ -8,7 +8,8 @@ public class Main {
 		// Handle user input
 		if(args.length == 0){
 			try {
-				new Loader();
+				Loader l = new Loader();
+				l.findNewWallpaperOnHotPage();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}

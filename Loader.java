@@ -12,13 +12,17 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.LinkedList;
 
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+
 public class Loader {
 
 	/**
 	 * An simple class for filtering jpg and png files
-	 * @author Tobias Kremer
+	 * 
 	 */
-	private class JPGAndPNGFileFilter implements FileFilter{
+	private class JPGAndPNGFileFilter implements FileFilter {
 
 		@Override
 		public boolean accept(File arg0) {
@@ -46,52 +50,54 @@ public class Loader {
 	private ArrayList<String> preferedToken = new ArrayList<>();
 	private int minNumberOfTags;
 
-
-	
 	public Loader() {
 
-		String[] preferedToken = {"abstract", "sunset", "mountains", "landscape",
-				"skyscape", "cityscape", "landscapes", "cityscapes", "graph",
-				"computer science", "stars", "outer space", "galaxies",
-				"beach", "beaches", "water", "nature", "fields", "sunlight",
-				"depth of field", "skyscape", "shadow", "clouds", "bokeh", "lenses",
-				"wireframes", "wireframe", "science", "minimal", "minimalism", "space",
-				"skies", "macro", "closeup"};
-		
+		String[] preferedToken = { "abstract", "sunset", "mountains",
+				"landscape", "skyscape", "cityscape", "landscapes",
+				"cityscapes", "graph", "computer science", "stars",
+				"outer space", "galaxies", "beach", "beaches", "water",
+				"nature", "fields", "sunlight", "depth of field", "skyscape",
+				"shadow", "clouds", "bokeh", "lenses", "wireframes",
+				"wireframe", "science", "minimal", "minimalism", "space",
+				"skies", "macro", "closeup" };
+
 		setPreferedToken(preferedToken);
 
 	}
 
-
 	/**
-	 * Constructor taking an array of strings as tags. These tags are preferred and will
-	 * be used to decide whether an image is "prefered" or not.
+	 * Constructor taking an array of strings as tags. These tags are preferred
+	 * and will be used to decide whether an image is "prefered" or not.
+	 * 
 	 * @param token
 	 */
 	public Loader(String[] token) {
 
-		if(token != null) {
+		if (token != null) {
 			setPreferedToken(token);
 		}
 
 	}
 
 	/**
-	 * Constructor taking an array of strings as tags. These tags are preferred and will
-	 * be used to decide whether an image is "prefered" or not. The threshhold is the number
-	 * of prefered tags an image has to have to get downloaded.
+	 * Constructor taking an array of strings as tags. These tags are preferred
+	 * and will be used to decide whether an image is "prefered" or not. The
+	 * threshhold is the number of prefered tags an image has to have to get
+	 * downloaded.
+	 * 
 	 * @param token
 	 * @param threshhold
 	 */
 	public Loader(String[] token, int threshhold) {
 
-		if(threshhold >= 0) {
+		if (threshhold >= 0) {
 			this.minNumberOfTags = threshhold;
 		} else {
-			System.out.println("Ignoring negative number of prefered tags, downloading every image!");
+			System.out
+					.println("Ignoring negative number of prefered tags, downloading every image!");
 			this.minNumberOfTags = 0;
 		}
-		
+
 		if (token != null) {
 
 			for (String t : token) {
@@ -103,33 +109,29 @@ public class Loader {
 		if (!this.downloadPath.exists()) {
 			this.downloadPath.mkdir();
 		}
-
-		System.out.println("Starting toplist search... Saving to "
-				+ downloadPath);
-		findNewWallpaperOnHotPage();
-
 	}
 
-	/** 
+	/**
 	 * Setter method for the prefered token list
+	 * 
 	 * @param preferedToken
-	 * void
+	 *            void
 	 */
 	public void setPreferedToken(String[] preferedToken) {
-		
-		for(String token : preferedToken) {
+
+		for (String token : preferedToken) {
 			this.preferedToken.add(token);
 		}
 	}
-	
+
 	public void setMinNumberOfTags(int threshold) {
-		this.minNumberOfTags = threshold; 
+		this.minNumberOfTags = threshold;
 	}
-	
+
 	public void setDownloadPath(String downloadPath) {
 		File newDownloadPath = new File(downloadPath);
-		
-		if(newDownloadPath.exists() && newDownloadPath.isDirectory()) {
+
+		if (newDownloadPath.exists() && newDownloadPath.isDirectory()) {
 			this.downloadPath = newDownloadPath;
 		} else {
 			try {
@@ -141,41 +143,41 @@ public class Loader {
 		}
 	}
 
-	
 	/**
 	 * Starts parsing the "hotpage" of wallhaven.cc. This is the latest site
 	 * sorted after SFW and views of the images.
 	 */
-	private void findNewWallpaperOnHotPage() {
+	public void findNewWallpaperOnHotPage() {
 
 		String parsingURL = mainSiteURL + searchSubString + categoriesSubString
 				+ concatSubString + puritySubString + concatSubString
 				+ sortingSubString + concatSubString + orderSubString;
 
-
 		for (File f : this.downloadPath.listFiles(new JPGAndPNGFileFilter())) {
 			// Add the names to the idList (the names are the ids of the images)
 			String fileName = f.getName();
-			this.idList.add(Integer.parseInt(fileName.substring(0, fileName.length() - 4)));
+			this.idList.add(Integer.parseInt(fileName.substring(0,
+					fileName.length() - 4)));
 		}
 
 		// TODO: Figure out a way to get the maximum index
 		for (int index = 0; index < 3000000; ++index) {
 			try {
 
-				URL hotPage = new URL(parsingURL + concatSubString + siteSubString
-						+ index);
-				String[] content = getURLContentAsStringArray(hotPage);
+				Document page = Jsoup
+						.connect(
+								parsingURL + concatSubString + siteSubString
+										+ index).timeout(1000).get();
 
-				LinkedList<Integer> currentImageIdsOnPage = getImageIdsFromContent(content);
+				LinkedList<Integer> currentImageIdsOnPage = getImageIdsFromDocument(page);
 
 				for (Integer id : currentImageIdsOnPage) {
 
 					if (!alreadyDownloaded(id)) {
-						loadImage(new Image(content, id));
+						loadImage(new Image(id));
 					} else {
-						System.out.println("Already owning Image with Id:"
-								+ id);
+						System.out
+								.println("Already owning Image with Id:" + id);
 					}
 				}
 
@@ -189,13 +191,12 @@ public class Loader {
 
 	}
 
-
 	/**
-	 * Check whether a given id has already been downloaded and return the
-	 * the result.
+	 * Check whether a given id has already been downloaded and return the the
+	 * result.
+	 * 
 	 * @param id
-	 * @return 
-	 * boolean
+	 * @return boolean
 	 */
 	private boolean alreadyDownloaded(Integer id) {
 
@@ -209,81 +210,60 @@ public class Loader {
 	}
 
 	/**
-	 * Check the given string array for appearance of image ids and
-	 * return them as an integer list.
+	 * Check the given string array for appearance of image ids and return them
+	 * as an integer list.
+	 * 
 	 * @param content
-	 * @return
-	 * LinkedList<Integer>
+	 * @return LinkedList<Integer>
 	 */
-	private LinkedList<Integer> getImageIdsFromContent(String[] content) {
-		
+	private LinkedList<Integer> getImageIdsFromDocument(Document doc) {
+
 		LinkedList<Integer> ids = new LinkedList<>();
 
-		// Each image is assumed to be 15 lines long
-		for (int i = 0; i < content.length; ++i) {
-			
-			content[i] = content[i].trim();
-			
-			if(content[i].startsWith("><a class=\"preview\" href=\"")){
-				String[] parts = content[i].split("/");
-				
-				String imageId = parts[parts.length - 1];
-				// Trim of the quote
-				imageId = imageId.substring(0, imageId.length() - 1);
-				
-				ids.push(new Integer(imageId));
-			}
+		for (Element element : doc.body().select("[class=preview]")) {
+
+			String url = element.attr("href");
+			String id = url.substring(url.lastIndexOf('/') + 1, url.length());
+			ids.push(new Integer(id));
+
 		}
-		
+
 		return ids;
 	}
 
 	/**
 	 * Return the homepage located at <em>url<em> and save its content as a 
 	 * String array.
+	 * 
 	 * @param url
 	 * @return String[]
 	 */
-	public static String[] getURLContentAsStringArray(URL url) {
-		StringBuffer content = new StringBuffer();
+	public static String getURLContentAsStringArray(URL url) {
 
+		StringBuffer content = new StringBuffer();
 		try {
-			
-			BufferedReader bf = new BufferedReader(new InputStreamReader(
+
+			BufferedReader in = new BufferedReader(new InputStreamReader(
 					url.openStream()));
 
-			while (bf.ready()) {
-				content.append(bf.readLine());
-				content.append("\n");
-
-				// Handle latency
-				if (!bf.ready()) {
-					Thread.sleep(5);
-				}
-			}
-
-			bf.close();
+			String inputLine;
+			while ((inputLine = in.readLine()) != null)
+				content.append(inputLine);
+			in.close();
 
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			System.err.println("Can't open String to URL:" + url.getFile());
 			e.printStackTrace();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
-		
-		String[] res = content.toString().split("\n");
-		
-		for(int i = 0; i < res.length; ++i)
-			res[i] = res[i].trim();
 
-		return res;
+		return content.toString();
 	}
 
 	/**
-	 * Check the filePath and the priority and download the image if
-	 * the priority is larger or equals the threshold.
+	 * Check the filePath and the priority and download the image if the
+	 * priority is larger or equals the threshold.
+	 * 
 	 * @param img
 	 * @return void
 	 */
@@ -323,6 +303,7 @@ public class Loader {
 
 	/**
 	 * Downloads the image to the download location
+	 * 
 	 * @param img
 	 * @throws IOException
 	 */
@@ -359,11 +340,10 @@ public class Loader {
 		return feasibleToken;
 	}
 
-	private void printInformation(int priority, long id,
-			boolean b) {
+	private void printInformation(int priority, long id, boolean b) {
 
-			System.out.print("Current Image has ID:" + id 
-					+  ", Priority: " + priority);
+		System.out.print("Current Image has ID:" + id + ", Priority: "
+				+ priority);
 
 		System.out
 				.println(" "
