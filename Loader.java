@@ -355,4 +355,20 @@ public class Loader {
 		return widthLimit;
 	}
 
+	/**
+	 * @param categoriesSubString the categoriesSubString to set
+	 */
+	public void setCategoriesSubString(String categoriesSubString) {
+		this.categoriesSubString = categoriesSubString;
+	}
+
+	/**
+	 * @param puritySubString the puritySubString to set
+	 */
+	public void setPuritySubString(String puritySubString) {
+		this.puritySubString = puritySubString;
+	}
+	
+
+
 }

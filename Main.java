@@ -15,6 +15,11 @@ public class Main {
 		parser.addArgument("-t", "--type")
 				.choices(new String[] { "hot", "random", "latest" })
 				.setDefault("hot");
+		parser.addArgument("-p", "--purity").type(String.class)
+				.setDefault("sfw");
+		parser.addArgument("-c", "--category").type(String.class)
+				.setDefault("all");
+
 		parser.addArgument("--help").action(Arguments.help());
 
 		try {
@@ -34,6 +39,42 @@ public class Main {
 				break;
 			default:
 				l.setSearchSubString("/search?");
+				break;
+			}
+
+			switch (pargs.getString("purity")) {
+			case "sfw":
+				l.setPuritySubString("purity=100");
+				break;
+			case "sketchy":
+				l.setPuritySubString("purity=010");
+				break;
+			case "both":
+				l.setPuritySubString("purity=110");
+				break;
+			}
+
+			switch (pargs.getString("category")) {
+			case "all":
+				l.setCategoriesSubString("categories=111");
+				break;
+			case "people":
+				l.setCategoriesSubString("categories=001");
+				break;
+			case "anime":
+				l.setCategoriesSubString("categories=010");
+				break;
+			case "general":
+				l.setCategoriesSubString("categories=100");
+				break;
+			case "animegeneral":
+				l.setCategoriesSubString("categories=110");
+				break;
+			case "animepeople":
+				l.setCategoriesSubString("categories=011");
+				break;
+			case "generalpeople":
+				l.setCategoriesSubString("categories=101");
 				break;
 			}
 
