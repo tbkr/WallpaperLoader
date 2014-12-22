@@ -12,6 +12,10 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.LinkedList;
 
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+
 public class Loader {
 
 	private String mainSiteURL = new String("http://alpha.wallhaven.cc");
@@ -31,36 +35,28 @@ public class Loader {
 	private int threshold;
 
 	public Loader() {
-
 		this(new String[] { "abstract", "sunset", "mountains", "landscape",
 				"skyscape", "cityscape", "landscapes", "cityscapes", "graph",
 				"computer science", "stars", "outer space", "galaxies",
 				"beach", "beaches", "water", "nature", "fields", "sunlight",
-				"depth of field", "skyscape", "shadow", "clouds", "bokeh", "lenses",
-				"wireframes", "wireframe", "science", "minimal", "minimalism", "space",
-				"skies", "macro", "closeup"
-				
+				"depth of field", "skyscape", "shadow", "clouds", "bokeh",
+				"lenses", "wireframes", "wireframe", "science", "minimal",
+				"minimalism", "space", "skies", "macro", "closeup"
 
 		});
-
 	}
 
 	public Loader(String[] token) {
-
 		this(token, 1);
-
 	}
 
 	public Loader(String[] token, int threshhold) {
-
 		this.threshold = threshhold;
 
 		if (token != null) {
-
 			for (String t : token) {
 				this.preferedToken.add(t.toLowerCase());
 			}
-
 		}
 
 		// If there isn't a history, make the directory
@@ -71,18 +67,15 @@ public class Loader {
 		System.out.println("Starting toplist search... Saving to "
 				+ downloadLocation);
 		findNewWallpaperOnHotPage();
-
 	}
 
 	/**
 	 * Starts parsing the "hotpage" of wallhaven.cc. This is the latest site
 	 * sorted after SFW and Views of the images.
 	 * 
-	 * @param maxId
-	 *            void
+	 * @param maxId void
 	 */
 	private void findNewWallpaperOnHotPage() {
-
 		String parsingURL = mainSiteURL + searchSubString + categoriesSubString
 				+ concatSubString + puritySubString + concatSubString
 				+ sortingSubString + concatSubString + orderSubString;
@@ -109,39 +102,34 @@ public class Loader {
 		}
 
 		// TODO: Figure out a way to get the maximum index
-		for (int index = 0; index < 3000000; ++index) {
+		for (int index = 1; index < 3000000; ++index) {
 			try {
 
-				hotPage = new URL(parsingURL + concatSubString + siteSubString
-						+ index);
-				String[] content = getURLContentAsStringArray(hotPage);
+				Document doc = Jsoup.connect(
+						parsingURL + concatSubString + siteSubString + index)
+						.get();
 
-				LinkedList<Integer> currentImageIdsOnPage = getImageIdsFromContent(content);
+				LinkedList<Integer> currentImageIdsOnPage = getImageIdsFromContent(doc);
 
 				for (Integer id : currentImageIdsOnPage) {
-
 					if (!alreadyDownloaded(id)) {
-						loadImage(new Image(content, id));
+						loadImage(new Image(id));
 					} else {
-						System.out.println("Already owning Image with Id:"
-								+ id);
+						System.out
+								.println("Already owning Image with Id:" + id);
 					}
 				}
 
 				System.out.println("Current Page:" + index);
 
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
 
 	}
 
-
-
 	private boolean alreadyDownloaded(Integer id) {
-
 		for (int i : this.idList) {
 			if (i == id) {
 				return true;
@@ -151,63 +139,17 @@ public class Loader {
 		return false;
 	}
 
-	private LinkedList<Integer> getImageIdsFromContent(String[] content) {
-		
+	private LinkedList<Integer> getImageIdsFromContent(Document doc) {
+
 		LinkedList<Integer> ids = new LinkedList<>();
 
-		// Each image is assumed to be 15 lines long
-		for (int i = 0; i < content.length; ++i) {
-			
-			content[i] = content[i].trim();
-			
-			if(content[i].startsWith("><a class=\"preview\" href=\"")){
-				String[] parts = content[i].split("/");
-				
-				String imageId = parts[parts.length - 1];
-				// Trim of the quote
-				imageId = imageId.substring(0, imageId.length() - 1);
-				
-				ids.push(new Integer(imageId));
-			}
+		for (Element el : doc.body().select("a[class=preview]")) {
+			String url = el.attr("href");
+			String id = url.substring(url.lastIndexOf('/') + 1, url.length());
+			ids.push(new Integer(id));
 		}
-		
+
 		return ids;
-	}
-
-	public static String[] getURLContentAsStringArray(URL url) {
-		StringBuffer content = new StringBuffer();
-
-		try {
-			BufferedReader bf = new BufferedReader(new InputStreamReader(
-					url.openStream()));
-
-			while (bf.ready()) {
-				content.append(bf.readLine());
-				content.append("\n");
-
-				// Handle latency
-				if (!bf.ready()) {
-					Thread.sleep(5);
-				}
-			}
-
-			bf.close();
-
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			System.err.println("Can't open String to URL:" + url.getFile());
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		String[] res = content.toString().split("\n");
-		
-		for(int i = 0; i < res.length; ++i)
-			res[i] = res[i].trim();
-
-		return res;
 	}
 
 	private void loadImage(Image img) {
@@ -278,11 +220,10 @@ public class Loader {
 		return feasibleToken;
 	}
 
-	private void printInformation(int priority, long id,
-			boolean b) {
+	private void printInformation(int priority, long id, boolean b) {
 
-			System.out.print("Current Image has ID:" + id 
-					+  ", Priority: " + priority);
+		System.out.print("Current Image has ID:" + id + ", Priority: "
+				+ priority);
 
 		System.out
 				.println(" "
