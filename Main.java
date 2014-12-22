@@ -1,13 +1,21 @@
+import java.util.Arrays;
+
 
 public class Main {
 
 	public static void main(String[] args) {
 		
-		try {
-			new Loader();
-		} catch (Exception e) {
-			e.printStackTrace();
+		// Handle user input
+		if(args.length == 0){
+			try {
+				new Loader();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
+		
+		
+
 
 	}
 }

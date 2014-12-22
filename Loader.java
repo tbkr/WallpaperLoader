@@ -39,27 +39,29 @@ public class Loader {
 	private String siteSubString = new String("page=");;
 	private String concatSubString = new String("&");
 
-	private File downloadLocation = new File(System.getProperty("user.dir")
+	private File downloadPath = new File(System.getProperty("user.dir")
 			+ File.separator + "Download" + File.separator + "");
 	private ArrayList<Integer> idList = new ArrayList<>();
 
 	private ArrayList<String> preferedToken = new ArrayList<>();
-	private int threshold;
+	private int minNumberOfTags;
 
 
 	
 	public Loader() {
 
-		this(new String[] { "abstract", "sunset", "mountains", "landscape",
+		String[] preferedToken = {"abstract", "sunset", "mountains", "landscape",
 				"skyscape", "cityscape", "landscapes", "cityscapes", "graph",
 				"computer science", "stars", "outer space", "galaxies",
 				"beach", "beaches", "water", "nature", "fields", "sunlight",
 				"depth of field", "skyscape", "shadow", "clouds", "bokeh", "lenses",
 				"wireframes", "wireframe", "science", "minimal", "minimalism", "space",
-				"skies", "macro", "closeup"
-		});
+				"skies", "macro", "closeup"};
+		
+		setPreferedToken(preferedToken);
 
 	}
+
 
 	/**
 	 * Constructor taking an array of strings as tags. These tags are preferred and will
@@ -68,7 +70,9 @@ public class Loader {
 	 */
 	public Loader(String[] token) {
 
-		this(token, 1);
+		if(token != null) {
+			setPreferedToken(token);
+		}
 
 	}
 
@@ -81,8 +85,13 @@ public class Loader {
 	 */
 	public Loader(String[] token, int threshhold) {
 
-		this.threshold = threshhold;
-
+		if(threshhold >= 0) {
+			this.minNumberOfTags = threshhold;
+		} else {
+			System.out.println("Ignoring negative number of prefered tags, downloading every image!");
+			this.minNumberOfTags = 0;
+		}
+		
 		if (token != null) {
 
 			for (String t : token) {
@@ -91,16 +100,48 @@ public class Loader {
 
 		}
 
-		if (!this.downloadLocation.exists()) {
-			this.downloadLocation.mkdir();
+		if (!this.downloadPath.exists()) {
+			this.downloadPath.mkdir();
 		}
 
 		System.out.println("Starting toplist search... Saving to "
-				+ downloadLocation);
+				+ downloadPath);
 		findNewWallpaperOnHotPage();
 
 	}
 
+	/** 
+	 * Setter method for the prefered token list
+	 * @param preferedToken
+	 * void
+	 */
+	public void setPreferedToken(String[] preferedToken) {
+		
+		for(String token : preferedToken) {
+			this.preferedToken.add(token);
+		}
+	}
+	
+	public void setMinNumberOfTags(int threshold) {
+		this.minNumberOfTags = threshold; 
+	}
+	
+	public void setDownloadPath(String downloadPath) {
+		File newDownloadPath = new File(downloadPath);
+		
+		if(newDownloadPath.exists() && newDownloadPath.isDirectory()) {
+			this.downloadPath = newDownloadPath;
+		} else {
+			try {
+				newDownloadPath.mkdir();
+			} catch (SecurityException e) {
+				System.err.println("Can't create directory at " + downloadPath);
+				e.printStackTrace();
+			}
+		}
+	}
+
+	
 	/**
 	 * Starts parsing the "hotpage" of wallhaven.cc. This is the latest site
 	 * sorted after SFW and views of the images.
@@ -112,7 +153,7 @@ public class Loader {
 				+ sortingSubString + concatSubString + orderSubString;
 
 
-		for (File f : this.downloadLocation.listFiles(new JPGAndPNGFileFilter())) {
+		for (File f : this.downloadPath.listFiles(new JPGAndPNGFileFilter())) {
 			// Add the names to the idList (the names are the ids of the images)
 			String fileName = f.getName();
 			this.idList.add(Integer.parseInt(fileName.substring(0, fileName.length() - 4)));
@@ -257,7 +298,7 @@ public class Loader {
 			priority = calculatePriority(img.tagList);
 
 			// Load the image, if it contains at least threshold token
-			if (priority >= this.threshold) {
+			if (priority >= this.minNumberOfTags) {
 
 				try {
 					downloadImage(img);
@@ -290,7 +331,7 @@ public class Loader {
 		URL url = new URL(img.filePath);
 		InputStream is = url.openStream();
 		OutputStream os = new FileOutputStream(
-				this.downloadLocation.getAbsolutePath() + File.separator
+				this.downloadPath.getAbsolutePath() + File.separator
 						+ img.fileName);
 
 		byte[] b = new byte[200048];
