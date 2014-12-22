@@ -3,6 +3,7 @@ import java.util.ArrayList;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 public class Image {
 	public String imagePath;
@@ -10,10 +11,12 @@ public class Image {
 	public String fileName;
 
 	public ArrayList<String> tagList = new ArrayList<>();
+	public ArrayList<String> colorList = new ArrayList<>();
 
-	int id;
-	int width;
-	int height;
+	public int id;
+	public int width;
+	public int height;
+	
 
 	/**
 	 * Constructor for a website which holds the link to the image with id
@@ -51,6 +54,15 @@ public class Image {
 		for (Element el : doc.select("a[class=tagname]")) {
 			tagList.add(el.text());
 		}
+		
+		Element colorPalette = doc.select("ul[class=sidebare-section color-palette]").first();
+		Elements colors = colorPalette.select("li[class=color]");
+		
+		for(Element color : colors) {
+			String tmp = color.attr("style");
+			this.colorList.add(tmp.split(":")[1]);
+		}
+		
 		System.out.println("Found download link: " + filePath);
 	}
 }
