@@ -20,7 +20,6 @@ public class Loader {
 	 * An simple class for filtering jpg and png files
 	 */
 	private class JPGAndPNGFileFilter implements FileFilter {
-
 		@Override
 		public boolean accept(File arg0) {
 
@@ -31,24 +30,25 @@ public class Loader {
 		}
 	}
 
-	private String mainSiteURL = new String("http://alpha.wallhaven.cc");
-	private String searchSubString = new String("/random?");
 	private String categoriesSubString = new String("categories=111");
-	private String puritySubString = new String("purity=100");
-	private String sortingSubString = new String("sorting=views");
-	private String orderSubString = new String("order=desc");
-	private String siteSubString = new String("page=");;
 	private String concatSubString = new String("&");
-
 	private File downloadPath = new File(System.getProperty("user.dir")
 			+ File.separator + "Download" + File.separator + "");
+	private int heightLimit = 0;
+
 	private ArrayList<Integer> idList = new ArrayList<>();
 
-	private ArrayList<String> preferedToken = new ArrayList<>();
+	private String mainSiteURL = new String("http://alpha.wallhaven.cc");
 	private int minNumberOfTags;
-	private int widthLimit = 1920;
-	private int heightLimit = 1080;
+	private String orderSubString = new String("order=desc");
+	private ArrayList<String> preferedToken = new ArrayList<>();;
+	private String puritySubString = new String("purity=100");
 
+	private String searchSubString = new String("/search?");
+	private String siteSubString = new String("page=");
+
+	private String sortingSubString = new String("sorting=views");
+	private int widthLimit = 0;
 	public Loader() {
 		String[] preferedToken = { "abstract", "sunset", "mountains",
 				"landscape", "skyscape", "cityscape", "landscapes",
@@ -60,7 +60,6 @@ public class Loader {
 				"skies", "macro", "closeup" };
 
 		setPreferedToken(preferedToken);
-		startDownload();
 	}
 
 	/**
@@ -73,8 +72,6 @@ public class Loader {
 		if (token != null) {
 			setPreferedToken(token);
 		}
-		
-		startDownload();
 	}
 
 	/**
@@ -98,99 +95,6 @@ public class Loader {
 		if (token != null) {
 			setPreferedToken(token);
 		}
-
-		startDownload();
-	}
-
-	private void startDownload() {
-		if (!this.downloadPath.exists()) {
-			this.downloadPath.mkdir();
-		}
-		
-		findNewWallpaperOnHotPage();
-	}
-
-	/**
-	 * Setter method for the prefered token list
-	 * 
-	 * @param preferedToken void
-	 */
-	public void setPreferedToken(String[] preferedToken) {
-		for (String token : preferedToken) {
-			this.preferedToken.add(token);
-		}
-	}
-
-	public void setMinNumberOfTags(int threshold) {
-		this.minNumberOfTags = threshold;
-	}
-
-	public void setDownloadPath(String downloadPath) {
-		File newDownloadPath = new File(downloadPath);
-
-		if (newDownloadPath.exists() && newDownloadPath.isDirectory()) {
-			this.downloadPath = newDownloadPath;
-		} else {
-			try {
-				newDownloadPath.mkdir();
-			} catch (SecurityException e) {
-				System.err.println("Can't create directory at " + downloadPath);
-				e.printStackTrace();
-			}
-		}
-	}
-
-	/**
-	 * Starts parsing the "hotpage" of wallhaven.cc. This is the latest site
-	 * sorted after SFW and views of the images.
-	 */
-	public void findNewWallpaperOnHotPage() {
-
-		String parsingURL = mainSiteURL + searchSubString + categoriesSubString
-				+ concatSubString + puritySubString + concatSubString
-				+ sortingSubString + concatSubString + orderSubString;
-
-		for (File f : this.downloadPath.listFiles(new JPGAndPNGFileFilter())) {
-			// Add the names to the idList (the names are the ids of the images)
-			String fileName = f.getName();
-			this.idList.add(Integer.parseInt(fileName.substring(0,
-					fileName.length() - 4)));
-		}
-
-		// try to get total number of pages
-		int lastPage;
-		try {
-			Document doc = Jsoup
-					.connect(parsingURL + concatSubString + siteSubString + 1)
-					.timeout(1000).get();
-			lastPage = Integer.parseInt(doc
-					.select("span[class=thumb-listing-page-total]").first()
-					.text().substring(2));
-		} catch (Exception e) {
-			lastPage = 3000000;
-		}
-
-		for (int index = 1; index < lastPage; ++index) {
-			try {
-				Document doc = Jsoup.connect(
-						parsingURL + concatSubString + siteSubString + index)
-						.get();
-
-				for (Integer id : getImageIdsFromContent(doc)) {
-					if (!alreadyDownloaded(id)) {
-						loadImage(new Image(id));
-					} else {
-						System.out
-								.println("Already owning Image with Id:" + id);
-					}
-				}
-
-				System.out.println("Current Page:" + index);
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-
 	}
 
 	/**
@@ -208,6 +112,43 @@ public class Loader {
 		}
 
 		return false;
+	}
+
+	private int calculatePriority(ArrayList<String> tagList) {
+		int feasibleToken = 0;
+
+		for (String token : tagList) {
+			if (this.preferedToken.contains(token)) {
+				feasibleToken++;
+			}
+		}
+
+		return feasibleToken;
+	}
+
+	/**
+	 * Downloads the image to the download location
+	 * 
+	 * @param img
+	 * @throws IOException
+	 */
+	private void downloadImage(Image img) throws IOException {
+		URL url = new URL(img.filePath);
+
+		InputStream is = url.openStream();
+		OutputStream os = new FileOutputStream(
+				this.downloadPath.getAbsolutePath() + File.separator
+						+ img.fileName);
+
+		byte[] b = new byte[200048];
+		int length;
+
+		while ((length = is.read(b)) != -1) {
+			os.write(b, 0, length);
+		}
+
+		is.close();
+		os.close();
 	}
 
 	private LinkedList<Integer> getImageIdsFromContent(Document doc) {
@@ -265,43 +206,6 @@ public class Loader {
 
 	}
 
-	/**
-	 * Downloads the image to the download location
-	 * 
-	 * @param img
-	 * @throws IOException
-	 */
-	private void downloadImage(Image img) throws IOException {
-		URL url = new URL(img.filePath);
-
-		InputStream is = url.openStream();
-		OutputStream os = new FileOutputStream(
-				this.downloadPath.getAbsolutePath() + File.separator
-						+ img.fileName);
-
-		byte[] b = new byte[200048];
-		int length;
-
-		while ((length = is.read(b)) != -1) {
-			os.write(b, 0, length);
-		}
-
-		is.close();
-		os.close();
-	}
-
-	private int calculatePriority(ArrayList<String> tagList) {
-		int feasibleToken = 0;
-
-		for (String token : tagList) {
-			if (this.preferedToken.contains(token)) {
-				feasibleToken++;
-			}
-		}
-
-		return feasibleToken;
-	}
-
 	private void printInformation(int priority, long id, boolean b) {
 
 		System.out.print("Current Image has ID:" + id + ", Priority: "
@@ -312,6 +216,143 @@ public class Loader {
 						+ new Timestamp(Calendar.getInstance()
 								.getTimeInMillis()) + " ");
 
+	}
+
+	/**
+	 * Starts parsing the "hotpage" of wallhaven.cc. This is the latest site
+	 * sorted after SFW and views of the images.
+	 */
+	public void findNewWallpaperOnHotPage() {
+		String parsingURL = mainSiteURL + searchSubString + categoriesSubString
+				+ concatSubString + puritySubString + concatSubString
+				+ sortingSubString + concatSubString + orderSubString;
+	
+		for (File f : this.downloadPath.listFiles(new JPGAndPNGFileFilter())) {
+			// Add the names to the idList (the names are the ids of the images)
+			String fileName = f.getName();
+			this.idList.add(Integer.parseInt(fileName.substring(0,
+					fileName.length() - 4)));
+		}
+	
+		System.out.println(parsingURL);
+	
+		// try to get total number of pages
+		int lastPage;
+		try {
+			Document doc = Jsoup
+					.connect(parsingURL + concatSubString + siteSubString + 1)
+					.timeout(1000).get();
+			lastPage = Integer.parseInt(doc
+					.select("span[class=thumb-listing-page-total]").first()
+					.text().substring(2));
+		} catch (Exception e) {
+			lastPage = 3000000;
+		}
+	
+		for (int index = 1; index < lastPage; ++index) {
+			try {
+				Document doc = Jsoup.connect(
+						parsingURL + concatSubString + siteSubString + index)
+						.get();
+	
+				for (Integer id : getImageIdsFromContent(doc)) {
+					if (!alreadyDownloaded(id)) {
+						loadImage(new Image(id));
+					} else {
+						System.out
+								.println("Already owning Image with Id:" + id);
+					}
+				}
+	
+				System.out.println("Current Page:" + index);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	
+	}
+
+	/**
+	 * Create download directory and start loading!
+	 */
+	public void startDownload() {
+		if (!this.downloadPath.exists()) {
+			this.downloadPath.mkdir();
+		}
+	
+		findNewWallpaperOnHotPage();
+	}
+
+	public void setDownloadPath(String downloadPath) {
+		File newDownloadPath = new File(downloadPath);
+
+		if (newDownloadPath.exists() && newDownloadPath.isDirectory()) {
+			this.downloadPath = newDownloadPath;
+		} else {
+			try {
+				newDownloadPath.mkdir();
+			} catch (SecurityException e) {
+				System.err.println("Can't create directory at " + downloadPath);
+				e.printStackTrace();
+			}
+		}
+	}
+
+	public void setMinNumberOfTags(int threshold) {
+		this.minNumberOfTags = threshold;
+	}
+
+	/**
+	 * Setter method for the prefered token list
+	 * 
+	 * @param preferedToken void
+	 */
+	public void setPreferedToken(String[] preferedToken) {
+		for (String token : preferedToken) {
+			this.preferedToken.add(token);
+		}
+	}
+
+	/**
+	 * @param searchSubString the searchSubString to set
+	 */
+	public void setSearchSubString(String searchSubString) {
+		this.searchSubString = searchSubString;
+	}
+
+	/**
+	 * @param sortingSubString the sortingSubString to set
+	 */
+	public void setSortingSubString(String sortingSubString) {
+		this.sortingSubString = sortingSubString;
+	}
+
+	/**
+	 * @param heightLimit the heightLimit to set
+	 */
+	public void setHeightLimit(int heightLimit) {
+		this.heightLimit = heightLimit;
+	}
+
+	/**
+	 * @param widthLimit the widthLimit to set
+	 */
+	public void setWidthLimit(int widthLimit) {
+		this.widthLimit = widthLimit;
+	}
+
+	/**
+	 * @return the heightLimit
+	 */
+	public int getHeightLimit() {
+		return heightLimit;
+	}
+
+	/**
+	 * @return the widthLimit
+	 */
+	public int getWidthLimit() {
+		return widthLimit;
 	}
 
 }
