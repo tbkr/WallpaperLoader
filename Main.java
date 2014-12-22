@@ -1,15 +1,18 @@
-import java.util.Arrays;
+import net.sourceforge.argparse4j.ArgumentParsers;
+import net.sourceforge.argparse4j.inf.ArgumentParser;
 
 public class Main {
 	public static void main(String[] args) {
-		// Handle user input
-		if(args.length == 0){
-			try {
-				Loader l = new Loader();
-				l.findNewWallpaperOnHotPage();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+		try {
+//			// Handle User Input
+//			ArgumentParser parser = ArgumentParsers
+//					.newArgumentParser("WallpaperLoader")
+//					.defaultHelp(true)
+//					.description(
+//							"Automatically download Wallapers from wallhaven.cc");
+			Loader l = new Loader();
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
 }

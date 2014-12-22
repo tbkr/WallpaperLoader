@@ -14,11 +14,12 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
+import com.sun.xml.internal.messaging.saaj.soap.ver1_1.Header1_1Impl;
+
 public class Loader {
 
 	/**
 	 * An simple class for filtering jpg and png files
-	 * 
 	 */
 	private class JPGAndPNGFileFilter implements FileFilter {
 
@@ -33,7 +34,7 @@ public class Loader {
 	}
 
 	private String mainSiteURL = new String("http://alpha.wallhaven.cc");
-	private String searchSubString = new String("/search?");
+	private String searchSubString = new String("/random?");
 	private String categoriesSubString = new String("categories=111");
 	private String puritySubString = new String("purity=100");
 	private String sortingSubString = new String("sorting=views");
@@ -47,17 +48,21 @@ public class Loader {
 
 	private ArrayList<String> preferedToken = new ArrayList<>();
 	private int minNumberOfTags;
+	private int widthLimit = 1920;
+	private int heightLimit = 1080;
 
 	public Loader() {
-		String[] preferedToken = {"abstract", "sunset", "mountains", "landscape",
-				"skyscape", "cityscape", "landscapes", "cityscapes", "graph",
-				"computer science", "stars", "outer space", "galaxies",
-				"beach", "beaches", "water", "nature", "fields", "sunlight",
-				"depth of field", "skyscape", "shadow", "clouds", "bokeh", "lenses",
-				"wireframes", "wireframe", "science", "minimal", "minimalism", "space",
-				"skies", "macro", "closeup"};
+		String[] preferedToken = { "abstract", "sunset", "mountains",
+				"landscape", "skyscape", "cityscape", "landscapes",
+				"cityscapes", "graph", "computer science", "stars",
+				"outer space", "galaxies", "beach", "beaches", "water",
+				"nature", "fields", "sunlight", "depth of field", "skyscape",
+				"shadow", "clouds", "bokeh", "lenses", "wireframes",
+				"wireframe", "science", "minimal", "minimalism", "space",
+				"skies", "macro", "closeup" };
 
 		setPreferedToken(preferedToken);
+		startDownload();
 	}
 
 	/**
@@ -67,10 +72,10 @@ public class Loader {
 	 * @param token
 	 */
 	public Loader(String[] token) {
-
 		if (token != null) {
 			setPreferedToken(token);
 		}
+		startDownload();
 	}
 
 	/**
@@ -83,7 +88,6 @@ public class Loader {
 	 * @param threshhold
 	 */
 	public Loader(String[] token, int threshhold) {
-
 		if (threshhold >= 0) {
 			this.minNumberOfTags = threshhold;
 		} else {
@@ -93,11 +97,13 @@ public class Loader {
 		}
 
 		if (token != null) {
-			for (String t : token) {
-				this.preferedToken.add(t.toLowerCase());
-			}
+			setPreferedToken(token);
 		}
 
+		startDownload();
+	}
+
+	private void startDownload() {
 		if (!this.downloadPath.exists()) {
 			this.downloadPath.mkdir();
 		}
@@ -106,11 +112,9 @@ public class Loader {
 	/**
 	 * Setter method for the prefered token list
 	 * 
-	 * @param preferedToken
-	 *            void
+	 * @param preferedToken void
 	 */
 	public void setPreferedToken(String[] preferedToken) {
-
 		for (String token : preferedToken) {
 			this.preferedToken.add(token);
 		}
@@ -155,8 +159,9 @@ public class Loader {
 		// try to get total number of pages
 		int lastPage;
 		try {
-			Document doc = Jsoup.connect(
-					parsingURL + concatSubString + siteSubString + 1).timeout(1000).get();
+			Document doc = Jsoup
+					.connect(parsingURL + concatSubString + siteSubString + 1)
+					.timeout(1000).get();
 			lastPage = Integer.parseInt(doc
 					.select("span[class=thumb-listing-page-total]").first()
 					.text().substring(2));
@@ -192,8 +197,7 @@ public class Loader {
 	 * result.
 	 * 
 	 * @param id
-	 * @return
-	 * boolean
+	 * @return boolean
 	 */
 	private boolean alreadyDownloaded(Integer id) {
 		for (int i : this.idList) {
@@ -234,6 +238,10 @@ public class Loader {
 
 			// Load the image, if it contains at least threshold token
 			if (priority >= this.minNumberOfTags) {
+
+				// check resolution
+				if (img.width < widthLimit || img.height < heightLimit)
+					return;
 
 				try {
 					downloadImage(img);
