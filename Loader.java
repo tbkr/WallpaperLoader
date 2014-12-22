@@ -1,10 +1,8 @@
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.URL;
 import java.sql.Timestamp;
@@ -41,9 +39,7 @@ public class Loader {
 				"beach", "beaches", "water", "nature", "fields", "sunlight",
 				"depth of field", "skyscape", "shadow", "clouds", "bokeh",
 				"lenses", "wireframes", "wireframe", "science", "minimal",
-				"minimalism", "space", "skies", "macro", "closeup"
-
-		});
+				"minimalism", "space", "skies", "macro", "closeup" });
 	}
 
 	public Loader(String[] token) {
@@ -80,18 +76,12 @@ public class Loader {
 				+ concatSubString + puritySubString + concatSubString
 				+ sortingSubString + concatSubString + orderSubString;
 
-		URL hotPage = null;
-
 		// Create a new FileFilter for jpg and png files
 		for (File f : this.downloadLocation.listFiles(new FileFilter() {
-
 			@Override
-			public boolean accept(File arg0) {
-
-				if (arg0.getName().endsWith(".jpg")
-						|| arg0.getName().endsWith(".png"))
-					return true;
-				return false;
+			public boolean accept(File file) {
+				return (file.getName().endsWith(".jpg") || file.getName()
+						.endsWith(".png"));
 			}
 		})) {
 			// Add the names to the idList (the names are the ids of the images)
@@ -101,17 +91,25 @@ public class Loader {
 					f.getName().length() - 4)));
 		}
 
-		// TODO: Figure out a way to get the maximum index
-		for (int index = 1; index < 3000000; ++index) {
-			try {
+		// try to get total number of pages
+		int lastPage;
+		try {
+			Document doc = Jsoup.connect(
+					parsingURL + concatSubString + siteSubString + 1).get();
+			lastPage = Integer.parseInt(doc
+					.select("span[class=thumb-listing-page-total]").first()
+					.text().substring(2));
+		} catch (Exception e) {
+			lastPage = 3000000;
+		}
 
+		for (int index = 1; index < lastPage; ++index) {
+			try {
 				Document doc = Jsoup.connect(
 						parsingURL + concatSubString + siteSubString + index)
 						.get();
 
-				LinkedList<Integer> currentImageIdsOnPage = getImageIdsFromContent(doc);
-
-				for (Integer id : currentImageIdsOnPage) {
+				for (Integer id : getImageIdsFromContent(doc)) {
 					if (!alreadyDownloaded(id)) {
 						loadImage(new Image(id));
 					} else {
@@ -121,7 +119,6 @@ public class Loader {
 				}
 
 				System.out.println("Current Page:" + index);
-
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -153,13 +150,11 @@ public class Loader {
 	}
 
 	private void loadImage(Image img) {
-
 		int priority = 0;
 		int id = 0;
-		String filetype = "unkown (not calculated because under t) ";
+		String filetype = "unknown (not calculated because under t) ";
 
 		if (img.filePath != null) {
-
 			// Decide whether a site contains correct token (image description)
 			priority = calculatePriority(img.tagList);
 
@@ -188,8 +183,8 @@ public class Loader {
 	}
 
 	private void downloadImage(Image img) throws IOException {
-
 		URL url = new URL(img.filePath);
+
 		InputStream is = url.openStream();
 		OutputStream os = new FileOutputStream(
 				this.downloadLocation.getAbsolutePath() + File.separator
@@ -204,11 +199,9 @@ public class Loader {
 
 		is.close();
 		os.close();
-
 	}
 
 	private int calculatePriority(ArrayList<String> tagList) {
-
 		int feasibleToken = 0;
 
 		for (String token : tagList) {
