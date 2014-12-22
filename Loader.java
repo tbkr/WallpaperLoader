@@ -140,7 +140,7 @@ public class Loader {
 				this.downloadPath.getAbsolutePath() + File.separator
 						+ img.fileName);
 
-		byte[] b = new byte[200048];
+		byte[] b = new byte[2048];
 		int length;
 
 		while ((length = is.read(b)) != -1) {
@@ -188,27 +188,25 @@ public class Loader {
 				try {
 					downloadImage(img);
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
+					System.err.println("Counldn't load image!" + e.getMessage());
 					e.printStackTrace();
 				}
 
-				// Logging information to the current image
-				printInformation(priority, img.id, true);
-			} else {
-				// Logging information to the current image
-				printInformation(priority, img.id, true);
+
 			}
+			// Logging information to the current image
+			printImageInformation(img, priority);
 
 		} else {
 			// Logging information to the current image
-			printInformation(priority, id, false);
+			System.err.println("Filepath is null!");
 		}
 
 	}
 
-	private void printInformation(int priority, long id, boolean b) {
+	private void printImageInformation(Image img, int priority) {
 
-		System.out.print("Current Image has ID:" + id + ", Priority: "
+		System.out.print("Current Image has ID:" + img.id + ", Priority: "
 				+ priority);
 
 		System.out
@@ -234,14 +232,15 @@ public class Loader {
 					fileName.length() - 4)));
 		}
 	
-		System.out.println(parsingURL);
+		
+		System.out.println("Download started with the following URL: "+ parsingURL);
 	
 		// try to get total number of pages
 		int lastPage;
 		try {
 			Document doc = Jsoup
 					.connect(parsingURL + concatSubString + siteSubString + 1)
-					.timeout(1000).get();
+					.timeout(5000).get();
 			lastPage = Integer.parseInt(doc
 					.select("span[class=thumb-listing-page-total]").first()
 					.text().substring(2));
@@ -260,7 +259,7 @@ public class Loader {
 						loadImage(new Image(id));
 					} else {
 						System.out
-								.println("Already owning Image with Id:" + id);
+								.println("Already owning Image with Id: " + id);
 					}
 				}
 	

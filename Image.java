@@ -31,12 +31,12 @@ public class Image {
 	}
 
 	private void collectFurtherInformationForImage(String imagePath) {
-		// TODO Auto-generated method stub
 		try {
-			Document page = Jsoup.connect(imagePath).timeout(1000).get();
+			Document page = Jsoup.connect(imagePath).timeout(5000).get();
 			parseImagePage(page);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
+			System.err.println(e.getMessage());
 			e.printStackTrace();
 		}
 	}
