@@ -16,7 +16,9 @@ public class Image {
 	int height;
 
 	/**
-	 * Constructor for a website which holds the link to the image with id <em>id<em>
+	 * Constructor for a website which holds the link to the image with id
+	 * <em>id<em>
+	 * 
 	 * @param id
 	 */
 	public Image(Integer id) {

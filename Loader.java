@@ -14,8 +14,6 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
-import com.sun.xml.internal.messaging.saaj.soap.ver1_1.Header1_1Impl;
-
 public class Loader {
 
 	/**
@@ -75,6 +73,7 @@ public class Loader {
 		if (token != null) {
 			setPreferedToken(token);
 		}
+		
 		startDownload();
 	}
 
@@ -107,6 +106,8 @@ public class Loader {
 		if (!this.downloadPath.exists()) {
 			this.downloadPath.mkdir();
 		}
+		
+		findNewWallpaperOnHotPage();
 	}
 
 	/**
