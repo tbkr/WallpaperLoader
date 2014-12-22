@@ -1,495 +1,294 @@
-import java.awt.Image;
-import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileFilter;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.StringReader;
-import java.net.MalformedURLException;
+import java.io.OutputStream;
 import java.net.URL;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Random;
-
-import javax.imageio.ImageIO;
+import java.util.LinkedList;
 
 public class Loader {
 
-	private String preImageRozneString = new String("http://wallpapers.wallbase.cc/rozne/wallpaper-");
-	private String preImageHighString = new String("http://wallpapers.wallbase.cc/high-resolution/wallpaper-");
+	private String mainSiteURL = new String("http://alpha.wallhaven.cc");
+	private String searchSubString = new String("/search?");
+	private String categoriesSubString = new String("categories=111");
+	private String puritySubString = new String("purity=100");
+	private String sortingSubString = new String("sorting=views");
+	private String orderSubString = new String("order=desc");
+	private String siteSubString = new String("page=");;
+	private String concatSubString = new String("&");
 
-	private String preSiteString = new String("http://wallbase.cc/wallpaper/");
-
-	private File downloadLocation = new File(System.getProperty("user.dir")+ File.separator + "Download" + File.separator+ "");
+	private File downloadLocation = new File(System.getProperty("user.dir")
+			+ File.separator + "Download" + File.separator + "");
 	private ArrayList<Integer> idList = new ArrayList<>();
 
-	
 	private ArrayList<String> preferedToken = new ArrayList<>();
 	private int threshold;
-	private boolean isInterruped;
-	
+
 	public Loader() {
 
-		this(new String[] {"abstract", "sunset", "mountains", "landscape", "skyscape",
-				"cityscape", "landscapes", "cityscapes", "graph", "computer science",
-				"stars", "outer space", "galaxies", "beach", "beaches", "water", "nature", "fields",
-				"sunlight", "depth of field", "skyscape", "shadow", "clouds"
+		this(new String[] { "abstract", "sunset", "mountains", "landscape",
+				"skyscape", "cityscape", "landscapes", "cityscapes", "graph",
+				"computer science", "stars", "outer space", "galaxies",
+				"beach", "beaches", "water", "nature", "fields", "sunlight",
+				"depth of field", "skyscape", "shadow", "clouds", "bokeh", "lenses",
+				"wireframes", "wireframe", "science", "minimal", "minimalism", "space",
+				"skies", "macro", "closeup"
 				
+
 		});
 
 	}
-	
+
 	public Loader(String[] token) {
 
 		this(token, 1);
-		
+
 	}
-	
+
 	public Loader(String[] token, int threshhold) {
-		
+
 		this.threshold = threshhold;
-		
-		if(token != null) {
-			
-			for(String t : token) {
+
+		if (token != null) {
+
+			for (String t : token) {
 				this.preferedToken.add(t.toLowerCase());
-			}	
-			
+			}
+
 		}
-		
-		if (!this.downloadLocation.exists()){
+
+		// If there isn't a history, make the directory
+		if (!this.downloadLocation.exists()) {
 			this.downloadLocation.mkdir();
-			startLoading();
-		} else {
-			int maxId = getMaxId(this.downloadLocation);
-			
-			System.out.println("Starting toplist search...");
-			startHotPage(maxId);
-		}
-	}
-
-	private int getMaxId(File downloadLocation) {
-		
-		System.out.println("Processing current database!...");
-		
-		int max = 0;
-		
-		try {
-			BufferedReader temp = new BufferedReader(new FileReader(this.downloadLocation + File.separator + "lastIndex.ep"));
-			
-			String line = temp.readLine();
-			max = Integer.parseInt(line);
-			
-			temp.close();
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (NumberFormatException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
 
-		return max;
+		System.out.println("Starting toplist search... Saving to "
+				+ downloadLocation);
+		findNewWallpaperOnHotPage();
+
 	}
 
-	private void startHotPage(int maxId) {
-		
-		String hotPageUrl = new String("http://wallbase.cc/toplist/index");
+	/**
+	 * Starts parsing the "hotpage" of wallhaven.cc. This is the latest site
+	 * sorted after SFW and Views of the images.
+	 * 
+	 * @param maxId
+	 *            void
+	 */
+	private void findNewWallpaperOnHotPage() {
+
+		String parsingURL = mainSiteURL + searchSubString + categoriesSubString
+				+ concatSubString + puritySubString + concatSubString
+				+ sortingSubString + concatSubString + orderSubString;
+
 		URL hotPage = null;
-		BufferedReader bf = null;
-		BufferedWriter bw = null;
-		int lastIndex = maxId;		
-		
-		for(File f: this.downloadLocation.listFiles(new FileFilter() {
-			
+
+		// Create a new FileFilter for jpg and png files
+		for (File f : this.downloadLocation.listFiles(new FileFilter() {
+
 			@Override
 			public boolean accept(File arg0) {
-				
-				if(arg0.getName().endsWith(".jpg") || arg0.getName().endsWith(".png"))
+
+				if (arg0.getName().endsWith(".jpg")
+						|| arg0.getName().endsWith(".png"))
 					return true;
 				return false;
 			}
-			}))
-		{		
-			this.idList.add(Integer.parseInt(f.getName().substring(0, f.getName().length()-4)));		
+		})) {
+			// Add the names to the idList (the names are the ids of the images)
+			// TODO: Better solution: Ignore the last four characters for
+			// ending...
+			this.idList.add(Integer.parseInt(f.getName().substring(0,
+					f.getName().length() - 4)));
 		}
-		
-		for(int index = lastIndex; index < 3000000; index++) {
+
+		// TODO: Figure out a way to get the maximum index
+		for (int index = 0; index < 3000000; ++index) {
 			try {
-				
-				// Writer for list the last inex of hotpage
-				try {
-					bw = new BufferedWriter(new FileWriter(this.downloadLocation + File.separator + "lastIndex.ep"));
-					bw.write(index+"");
-					bw.close();
-				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-				
-				boolean loaded = false;
-				boolean alreadyOwned = false;
-				hotPage = new URL(hotPageUrl + "/" + index);
-				bf = new BufferedReader(new InputStreamReader(hotPage.openStream()));
-				String currentLine = null;
-				Integer id = 0;
-				
-				System.out.println("Current at Index:"+ index);
-				
-				
-				while(bf.ready() && !loaded) {
-					
-					currentLine = bf.readLine();
-					currentLine = currentLine.trim();
-					
-					if(currentLine.startsWith("<div id=\"thumb")) {
 
-						while(bf.ready()) {
-							
-							if(currentLine.contains("wallbase.cc/wallpaper")) {
-								String[] token = currentLine.split("\"");
-								String linkToPage = token[1];
-								String idString = linkToPage.replace("http://wallbase.cc/wallpaper/", "");
-								idString = idString.replace("/", "");
+				hotPage = new URL(parsingURL + concatSubString + siteSubString
+						+ index);
+				String[] content = getURLContentAsStringArray(hotPage);
 
-								id = Integer.parseInt(idString);
-								
-								if(!this.idList.contains(id)) {
-									loadPictureFromPage(linkToPage, id);
-									loaded = true;
-								} else
-									alreadyOwned = true;
-								break;
-							}
-							
-							currentLine = bf.readLine();
-							currentLine = currentLine.trim();
-							
-						}
-		
+				LinkedList<Integer> currentImageIdsOnPage = getImageIdsFromContent(content);
+
+				for (Integer id : currentImageIdsOnPage) {
+
+					if (!alreadyDownloaded(id)) {
+						loadImage(new Image(content, id));
+					} else {
+						System.out.println("Already owning Image with Id:"
+								+ id);
 					}
+				}
 
-				}
-				
-				if(alreadyOwned){
-					System.out.println("Already own this image: " + id);
-				}
-				
-				
-				
-				
+				System.out.println("Current Page:" + index);
+
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
 
-		
-	}
-	
-	public boolean isInterruped() {
-		return isInterruped;
 	}
 
-	public void setInterruped(boolean isInterruped) {
-		this.isInterruped = isInterruped;
-	}
 
-	private void loadPictureFromPage(String linkToPage, Integer id) {
-		
-		int priority = 0;
-		String siteContent = "";
-		String imagetype = "";
-		String filetype = "unkown (not calculated because under t) ";
 
-		// Loads the siteContent from the given URL 
-		siteContent = loadSourceCode(this.preSiteString + id);
+	private boolean alreadyDownloaded(Integer id) {
 
-		if(siteContent != null) {
-		
-			// Decide whether a site contains correct token (image description)
-			priority = calculatePriority(siteContent);
-			
-			// Load the image, if it contains at least threshold token
-			if(priority >= this.threshold) {
-				
-				imagetype = getFileType(siteContent);
-				filetype = imagetype.substring(imagetype.length() - 3);
-				
-				if(imagetype.equals("rozne-jpg"))
-					downloadImage(this.preImageRozneString + id + ".jpg", id, filetype);
-				else if(imagetype.equals("rozne-png"))
-					downloadImage(this.preImageRozneString + id + ".png", id, filetype);
-				else if(imagetype.equals("high-resolution-jpg"))
-					downloadImage(this.preImageHighString + id + ".jpg", id, filetype);
-				else if(imagetype.equals("high-resolution-png"))
-					downloadImage(this.preImageHighString + id + ".png", id, filetype);
-				else if(imagetype.equals("manga-anime-jpg"))
-					downloadImage(this.preImageHighString + id + ".png", id, filetype);
-				else if(imagetype.equals("manga-anime-png"))
-					downloadImage(this.preImageHighString + id + ".png", id, filetype);
-				
-				// Logging information to the current image
-				printInformation(priority, filetype, id, true);
-			} else {
-				// Logging information to the current image
-				printInformation(priority, filetype, id, true);
+		for (int i : this.idList) {
+			if (i == id) {
+				return true;
 			}
+		}
+
+		return false;
+	}
+
+	private LinkedList<Integer> getImageIdsFromContent(String[] content) {
+		
+		LinkedList<Integer> ids = new LinkedList<>();
+
+		// Each image is assumed to be 15 lines long
+		for (int i = 0; i < content.length; ++i) {
 			
+			content[i] = content[i].trim();
 			
-		} else {
-			// Logging information to the current image
-			printInformation(priority, filetype, id, false);
+			if(content[i].startsWith("><a class=\"preview\" href=\"")){
+				String[] parts = content[i].split("/");
+				
+				String imageId = parts[parts.length - 1];
+				// Trim of the quote
+				imageId = imageId.substring(0, imageId.length() - 1);
+				
+				ids.push(new Integer(imageId));
+			}
 		}
 		
+		return ids;
 	}
 
-	private void continueLoading(int maxId) {
-		
-		// Iterator for the number of pictures
-				
-				for(int id = maxId; id < 4000000; id++ ) {
-					
-					int priority = 0;
-					String siteContent = "";
-					String fileFormat = "";
+	public static String[] getURLContentAsStringArray(URL url) {
+		StringBuffer content = new StringBuffer();
 
-					// Loads the siteContent from the given URL 
-					siteContent = loadSourceCode(this.preSiteString + id);
-
-					if(siteContent != null) {
-					
-						// Decide whether a site contains correct token (image description)
-						priority = calculatePriority(siteContent);
-						
-						// Load the image, if it contains at least threshold token
-						if(priority >= this.threshold) {
-							
-							String imagetype = getFileType(siteContent);
-							String filetype = imagetype.substring(imagetype.length() - 3);
-							
-							if(imagetype.equals("rozne-jpg"))
-								downloadImage(this.preImageRozneString + id + ".jpg", id, filetype);
-							else if(imagetype.equals("rozne-png"))
-								downloadImage(this.preImageRozneString + id + ".png", id, filetype);
-							else if(imagetype.equals("high-resolution-jpg"))
-								downloadImage(this.preImageHighString + id + ".jpg", id, filetype);
-							else if(imagetype.equals("high-resolution-png"))
-								downloadImage(this.preImageHighString + id + ".png", id, filetype);
-							else if(imagetype.equals("manga-anime-jpg"))
-								downloadImage(this.preImageHighString + id + ".png", id, filetype);
-							else if(imagetype.equals("manga-anime-png"))
-								downloadImage(this.preImageHighString + id + ".png", id, filetype);
-							
-							// Logging information to the current image
-							printInformation(priority, filetype, id, true);
-						} else {
-							// Logging information to the current image
-							printInformation(priority, fileFormat, id, true);
-						}
-						
-						
-					} else {
-						// Logging information to the current image
-						printInformation(priority, fileFormat, id, false);
-					}
-				
-				}
-		
-	}
-
-	private void startLoading() {
-
-		continueLoading(1000000);
-
-	}
-	
-	private void printInformation(int priority, String fileFormat, long id, boolean b) {
-		
-		if(b)
-			System.out.print("Current Image has ID:" + id + ", FileFormat: " + fileFormat + ", Priority: "+ priority);
-		else
-			System.out.print("Current Image has ID:" + id + " and doesn't exist!");
-		
-		System.out.println(" "+ new Timestamp(Calendar.getInstance().getTimeInMillis())+" ");
-		
-	}
-
-	private String getFileType(String siteContent) {
-		
-		// The more token the higher the priority
-		BufferedReader bf = null;
-		String fileFormat = "";
-		
-		
 		try {
-			bf = new BufferedReader(new StringReader(siteContent));
+			BufferedReader bf = new BufferedReader(new InputStreamReader(
+					url.openStream()));
 
 			while (bf.ready()) {
-				
-				
-				String line = bf.readLine();				
-				line = line.trim();
-				
-				if(line.contains("rozne") && line.contains(".jpg")) {
-					return "rozne-jpg";
-				}
-				else if(line.contains("rozne") && line.contains(".png")) {
-					return "rozne-png";
-				}
-				else if(line.contains("high-resolution") && line.contains(".jpg")) {
-					return "high-resolution-jpg";
-				}
-				else if(line.contains("high-resolution") && line.contains(".png")) {
-					return "high-resolution-png";
-				}
-				else if(line.contains("manga-anime") && line.contains(".jpg")) {
-					return "manga-anime-jpg";
-				}
-				else if(line.contains("manga-anime") && line.contains(".png")) {
-					return "manga-anime-png";
-				}
-				
-				if(!bf.ready()) {
-					try {
-						Thread.sleep(100);
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
+				content.append(bf.readLine());
+				content.append("\n");
+
+				// Handle latency
+				if (!bf.ready()) {
+					Thread.sleep(5);
 				}
 			}
 
-	
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.getMessage();
-		} 
-		
-		return "error";
-		
-	}
-
-	private void downloadImage(String string, int id, String filename) {
-
-		BufferedImage im = null;
-		URL loadImageFrom = null;
-		
-		try {
-			loadImageFrom = new URL(string);
-			
-			im = ImageIO.read(loadImageFrom);
-			ImageIO.write(im, filename , new File(this.downloadLocation.toString() + File.separator + id + "." +filename));
-			
-		} catch (MalformedURLException e) {
-			e.printStackTrace();
-			System.err.println(e.getMessage());
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		
-	}
-
-	private String loadSourceCode(String string) {
-	
-		BufferedReader bf = null;
-		String siteContent = "";
-
-		
-		try {
-			URL url = new URL(string);
-			bf = new BufferedReader(new InputStreamReader(url.openStream()));
-			String line = "";
-
-			while ((line = bf.readLine()) != null) {
-				siteContent += line + System.getProperty("line.separator");
-
-				if(!bf.ready()) {
-					try {
-						Thread.sleep(100);
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				}
-			}
-			
 			bf.close();
 
-			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
-			//e.printStackTrace();
-			return null;
-		}
-		
-		
-		return siteContent;
-	}
-
-	private int calculatePriority(String siteContent) {
-		
-		// The more token the higher the priority
-		int priority = 0;
-		BufferedReader bf = null;
-		String metaToken = "";
-		
-		
-		try {
-			bf = new BufferedReader(new StringReader(siteContent));
-
-			while (bf.ready()) {
-				String line = bf.readLine();
-				line = line.trim();
-				
-				if(line.startsWith("<meta name=\"description\" content=\"") && line.endsWith("/>")) {
-					metaToken = line;
-					break;
-				}
-			}
-
-			
-		} catch (IOException e) {
+			System.err.println("Can't open String to URL:" + url.getFile());
+			e.printStackTrace();
+		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
-		// Trims the TokenList accordingly
-		metaToken = metaToken.replace("<meta name=\"description\" content=\"", "");
-		metaToken = metaToken.replace("\" />", "");
+		String[] res = content.toString().split("\n");
 		
-		// Creates the array containing the token of the current image
-		String[] imageToken = metaToken.split(" ");
-		ArrayList<String> currentToken = new ArrayList<>();
-		
-		// Creates the ArrayList with lowercase token
-		for(String s : imageToken) {
-			currentToken.add(s.toLowerCase());
+		for(int i = 0; i < res.length; ++i)
+			res[i] = res[i].trim();
+
+		return res;
+	}
+
+	private void loadImage(Image img) {
+
+		int priority = 0;
+		int id = 0;
+		String filetype = "unkown (not calculated because under t) ";
+
+		if (img.filePath != null) {
+
+			// Decide whether a site contains correct token (image description)
+			priority = calculatePriority(img.tagList);
+
+			// Load the image, if it contains at least threshold token
+			if (priority >= this.threshold) {
+
+				try {
+					downloadImage(img);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
+				// Logging information to the current image
+				printInformation(priority, img.id, true);
+			} else {
+				// Logging information to the current image
+				printInformation(priority, img.id, true);
+			}
+
+		} else {
+			// Logging information to the current image
+			printInformation(priority, id, false);
 		}
-		
-		for(String token : this.preferedToken) {
-			if(currentToken.contains(token)) {
-				priority++;
+
+	}
+
+	private void downloadImage(Image img) throws IOException {
+
+		URL url = new URL(img.filePath);
+		InputStream is = url.openStream();
+		OutputStream os = new FileOutputStream(
+				this.downloadLocation.getAbsolutePath() + File.separator
+						+ img.fileName);
+
+		byte[] b = new byte[200048];
+		int length;
+
+		while ((length = is.read(b)) != -1) {
+			os.write(b, 0, length);
+		}
+
+		is.close();
+		os.close();
+
+	}
+
+	private int calculatePriority(ArrayList<String> tagList) {
+
+		int feasibleToken = 0;
+
+		for (String token : tagList) {
+			if (this.preferedToken.contains(token)) {
+				feasibleToken++;
 			}
 		}
-		
-		
-		return priority;
-		
-		
+
+		return feasibleToken;
+	}
+
+	private void printInformation(int priority, long id,
+			boolean b) {
+
+			System.out.print("Current Image has ID:" + id 
+					+  ", Priority: " + priority);
+
+		System.out
+				.println(" "
+						+ new Timestamp(Calendar.getInstance()
+								.getTimeInMillis()) + " ");
+
 	}
 
 }
