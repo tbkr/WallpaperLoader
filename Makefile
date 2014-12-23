@@ -8,17 +8,20 @@ CP = lib/argparse4j-0.4.4.jar:lib/jsoup-1.8.1.jar:.
 .java.class:
 	$(JAVAC) $(JFLAGS) -classpath $(CP) $*.java
 
-CLASSES = \
+SOURCES = \
         Image.java \
         Loader.java \
-        Main.java 
+        Main.java
 
 default: classes
 
-classes: $(CLASSES:.java=.class)
+classes: $(SOURCES:.java=.class)
 
 clean:
 	$(RM) *.class
+
+jar: classes
+	jar cmf Manifest.mf WallpaperLoader.jar *.class
 
 run: classes
 	$(JAVA) -classpath $(CP) Main
