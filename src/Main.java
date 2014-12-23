@@ -1,3 +1,7 @@
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
@@ -10,24 +14,31 @@ public class Main {
 		ArgumentParser parser = ArgumentParsers.newArgumentParser(
 				"WallpaperLoader", false).description(
 				"Automatically download Wallapers from wallhaven.cc");
+
 		parser.addArgument("-w", "--width").type(Integer.class).setDefault(0);
 		parser.addArgument("-h", "--height").type(Integer.class).setDefault(0);
+
 		parser.addArgument("-t", "--type")
 				.choices(new String[] { "hot", "random", "latest" })
 				.setDefault("hot");
 		parser.addArgument("-p", "--purity").type(String.class)
 				.setDefault("sfw");
-		parser.addArgument("-c", "--category").type(String.class)
-				.setDefault("all");
+		parser.addArgument("-c", "--category")
+				// .action(Arguments.append())
+				.choices(new String[] { "all", "anime", "people", "general" })
+				.nargs("+").setDefault("all");
 
 		parser.addArgument("--help").action(Arguments.help());
 
 		try {
 			Namespace pargs = parser.parseArgs(args);
 			Loader l = new Loader();
+
+			// set desired width and height
 			l.setHeightLimit(pargs.getInt("height"));
 			l.setWidthLimit(pargs.getInt("width"));
 
+			// set desired type
 			switch (pargs.getString("type")) {
 			case "random":
 				l.setSearchSubString("/random?");
@@ -42,43 +53,45 @@ public class Main {
 				break;
 			}
 
+			// set desired purity setting
 			switch (pargs.getString("purity")) {
 			case "sfw":
+				// only sfw
 				l.setPuritySubString("purity=100");
 				break;
 			case "sketchy":
+				// only sketchy
 				l.setPuritySubString("purity=010");
 				break;
 			default:
-				l.setPuritySubString("purity=010");
+				// both
+				l.setPuritySubString("purity=110");
 				break;
 
 			}
 
-			switch (pargs.getString("category")) {
-			case "people":
-				l.setCategoriesSubString("categories=001");
-				break;
-			case "anime":
-				l.setCategoriesSubString("categories=010");
-				break;
-			case "general":
-				l.setCategoriesSubString("categories=100");
-				break;
-			case "animegeneral":
-				l.setCategoriesSubString("categories=110");
-				break;
-			case "animepeople":
-				l.setCategoriesSubString("categories=011");
-				break;
-			case "generalpeople":
-				l.setCategoriesSubString("categories=101");
-				break;
-			default:
-				l.setCategoriesSubString("categories=111");
-				break;
-			}
+			// set desired category
+			Map<String, Integer> categories = new HashMap<String, Integer>();
+			categories.put("all", 0b111);
+			categories.put("people", 0b001);
+			categories.put("anime", 0b010);
+			categories.put("general", 0b100);
 
+			int cat = 0;
+			if (pargs.get("category").getClass() == ArrayList.class) {
+				for (Object o : pargs.getList("category")) {
+					String cstr = (String) o;
+					if (categories.containsKey(cstr)) {
+						cat |= categories.get(cstr);
+					}
+				}
+			} else {
+				cat = categories.get("all");
+			}
+			l.setCategoriesSubString(String.format("categories=%3s",
+					Integer.toBinaryString(cat)).replace(' ', '0'));
+
+			// start loading!
 			l.startDownload();
 		} catch (ArgumentParserException e) {
 			parser.handleError(e);
