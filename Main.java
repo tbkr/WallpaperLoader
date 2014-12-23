@@ -49,15 +49,13 @@ public class Main {
 			case "sketchy":
 				l.setPuritySubString("purity=010");
 				break;
-			case "both":
-				l.setPuritySubString("purity=110");
+			default:
+				l.setPuritySubString("purity=010");
 				break;
+
 			}
 
 			switch (pargs.getString("category")) {
-			case "all":
-				l.setCategoriesSubString("categories=111");
-				break;
 			case "people":
 				l.setCategoriesSubString("categories=001");
 				break;
@@ -75,6 +73,9 @@ public class Main {
 				break;
 			case "generalpeople":
 				l.setCategoriesSubString("categories=101");
+				break;
+			default:
+				l.setCategoriesSubString("categories=111");
 				break;
 			}
 
