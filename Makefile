@@ -1,34 +1,18 @@
 JFLAGS = -g
-JAVA = java
-JAVAC = javac
-CP = lib/argparse4j-0.4.4.jar:lib/jsoup-1.8.1.jar:src/
-
+JC = javac
+JSOURCE = -sourcepath src/
+JAR= -cp src/lib/argparse4j-0.4.4.jar:src/lib/jsoup-1.8.1.jar
 .SUFFIXES: .java .class
-
 .java.class:
-	$(JAVAC) $(JFLAGS) -classpath $(CP) -d build/ -sourcepath src $*.java
+	$(JC) $(JFLAGS) $(JAR) $(JSOURCE) -d bin/ $<
 
-SOURCES = \
-        src/Image.java \
-        src/Loader.java \
-        src/Main.java
+CLASSES =  \
+		   src/Image.java \
+		   src/Loader.java \
+		   src/Main.java \
 
-CLASSES = \
-	build/Image.class \
-	build/Loader.class \
-	build/Main.class
 
-default: classes
-
-classes: $(SOURCES:.java=.class)
+default:$(CLASSES:.java=.class)
 
 clean:
-	$(RM) build/*.class
-
-jar: classes
-	cd build; \
-	jar cmf ../Manifest.mf ../WallpaperLoader.jar *.class; \
-	cd ..
-
-run: classes
-	$(JAVA) -classpath $(CP) Main
+	$(RM) bin/*.class
