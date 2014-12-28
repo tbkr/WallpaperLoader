@@ -4,15 +4,19 @@ JSOURCE = -sourcepath src/
 JAR= -cp lib/argparse4j-0.4.4.jar:lib/jsoup-1.8.1.jar
 .SUFFIXES: .java .class
 .java.class:
-	$(JC) $(JFLAGS) $(JAR) $(JSOURCE) -d bin/ $<
+	$(JC) $(JFLAGS) $(JAR) $(JSOURCE) -d ./bin/ $<
+
+.PHONY: binaries
 
 CLASSES =  \
 		   src/Image.java \
 		   src/Loader.java \
 		   src/Main.java \
 
+all: binaries $(CLASSES:.java=.class)
 
-default:$(CLASSES:.java=.class)
+binaries:
+	mkdir -p ./bin/
 
 clean:
-	$(RM) bin/*.class
+	$(RM) -r ./bin/*.class
