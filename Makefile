@@ -1,7 +1,7 @@
 JFLAGS = -g
 JC = javac
 JSOURCE = -sourcepath src/
-JAR= -cp src/lib/argparse4j-0.4.4.jar:src/lib/jsoup-1.8.1.jar
+JAR= -cp lib/argparse4j-0.4.4.jar:lib/jsoup-1.8.1.jar
 .SUFFIXES: .java .class
 .java.class:
 	$(JC) $(JFLAGS) $(JAR) $(JSOURCE) -d bin/ $<
