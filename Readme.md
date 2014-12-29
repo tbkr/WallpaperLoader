@@ -1,4 +1,4 @@
 Wallpaper Loader
 ================
 
-For license, see license.txt.
+For license, see [license.txt](license.txt).
