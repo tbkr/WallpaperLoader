@@ -18,5 +18,10 @@ all: binaries $(CLASSES:.java=.class)
 binaries:
 	mkdir -p ./bin/
 
+jar: binaries $(CLASSES:.java=.class); \
+	cd bin; \
+	jar cmf ../Manifest.mf ../WallpaperLoader.jar *.class; \
+	cd ..
+
 clean:
 	$(RM) -r ./bin/*.class
