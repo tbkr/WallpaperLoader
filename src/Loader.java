@@ -130,7 +130,7 @@ public class Loader {
 			lastPage = 3000000;
 		}
 
-		for (int index = 1; index < lastPage; ++index) {
+		for (int index = 1; index <= lastPage; ++index) {
 			// get the ids of all wallpapers for the current page
 			System.out.printf("Parsing page #%d%n", index);
 			List<Integer> ids = findWallpapersOnPage(parsingURL, index);
