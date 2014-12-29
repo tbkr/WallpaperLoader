@@ -6,10 +6,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
-import java.sql.Timestamp;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.LinkedList;
+import java.util.List;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -33,8 +35,8 @@ public class Loader {
 
 	private String categoriesSubString = new String("categories=111");
 	private String concatSubString = new String("&");
-	private File downloadPath = new File(System.getProperty("user.dir")
-			+ File.separator + "Download" + File.separator + "");
+	private File downloadPath;
+
 	private int heightLimit = 0;
 
 	private ArrayList<Integer> idList = new ArrayList<>();
@@ -49,6 +51,8 @@ public class Loader {
 
 	private String sortingSubString = new String("sorting=views");
 	private int widthLimit = 0;
+
+	private boolean tagsToSymlinks;
 
 	private ArrayList<String> preferedToken = new ArrayList<>();
 	private ArrayList<Color> preferedColor = new ArrayList<>();
@@ -109,17 +113,10 @@ public class Loader {
 		String parsingURL = mainSiteURL + searchSubString + categoriesSubString
 				+ concatSubString + puritySubString + concatSubString
 				+ sortingSubString + concatSubString + orderSubString;
-	
-		for (File f : this.downloadPath.listFiles(new JPGAndPNGFileFilter())) {
-			// Add the names to the idList (the names are the ids of the images)
-			String fileName = f.getName();
-			this.idList.add(Integer.parseInt(fileName.substring(0,
-					fileName.length() - 4)));
-		}
-	
+
 		System.out.println("Download started with the following URL: "
 				+ parsingURL);
-	
+
 		// try to get total number of pages
 		int lastPage;
 		try {
@@ -129,31 +126,25 @@ public class Loader {
 			lastPage = Integer.parseInt(doc
 					.select("span[class=thumb-listing-page-total]").first()
 					.text().substring(2));
-		} catch (Exception e) {
+		} catch (IOException e) {
 			lastPage = 3000000;
 		}
-	
+
 		for (int index = 1; index < lastPage; ++index) {
-			try {
-				Document doc = Jsoup.connect(
-						parsingURL + concatSubString + siteSubString + index)
-						.get();
-	
-				for (Integer id : getImageIdsFromContent(doc)) {
-					if (!alreadyDownloaded(id)) {
-						loadImage(new Image(id));
-					} else {
-						System.out.println("Already owning Image with Id: "
-								+ id);
-					}
+			// get the ids of all wallpapers for the current page
+			System.out.printf("Parsing page #%d%n", index);
+			List<Integer> ids = findWallpapersOnPage(parsingURL, index);
+
+			// download the found wallpapers
+			for (Integer id : ids) {
+				if (!isAlreadyDownloaded(id)) {
+					loadImage(new Image(id));
+				} else {
+					System.out.printf("> Already loaded image #%d%n", id);
 				}
-	
-				System.out.println("Current Page:" + index);
-			} catch (IOException e) {
-				e.printStackTrace();
 			}
 		}
-	
+
 	}
 
 	/**
@@ -163,8 +154,44 @@ public class Loader {
 		if (!this.downloadPath.exists()) {
 			this.downloadPath.mkdir();
 		}
-	
+
 		findNewWallpaperOnHotPage();
+	}
+
+	/**
+	 * Get all files that we already downloaded to downloadPath.
+	 */
+	private void loadAlreadyDownloadedFiles() {
+		for (File f : this.downloadPath.listFiles(new JPGAndPNGFileFilter())) {
+			// parse the id from the filename
+			String file = f.getName();
+			int from = 0;
+			int to = (file.indexOf('_') != -1) ? file.indexOf('_') : file
+					.indexOf('.');
+			this.idList.add(Integer.parseInt(file.substring(from, to)));
+		}
+	}
+
+	/**
+	 * Get the ID's of all images on one specific page.
+	 * 
+	 * @param url
+	 * @param pageNumber
+	 */
+	private List<Integer> findWallpapersOnPage(String url, int pageNumber) {
+		List<Integer> ids = new LinkedList<Integer>();
+		try {
+			String pageURL = url + concatSubString + siteSubString + pageNumber;
+			Document doc = Jsoup.connect(pageURL).get();
+
+			for (Integer id : getImageIdsFromContent(doc)) {
+				ids.add(id);
+			}
+		} catch (IOException e) {
+			System.out.printf("Couldn't get page content. Skipping page %d.%n",
+					pageNumber);
+		}
+		return ids;
 	}
 
 	/**
@@ -174,14 +201,8 @@ public class Loader {
 	 * @param id
 	 * @return boolean
 	 */
-	private boolean alreadyDownloaded(Integer id) {
-		for (int i : this.idList) {
-			if (i == id) {
-				return true;
-			}
-		}
-
-		return false;
+	private boolean isAlreadyDownloaded(Integer id) {
+		return idList.contains(id);
 	}
 
 	private double[] rgbToYUV(Color c) {
@@ -289,48 +310,91 @@ public class Loader {
 	 */
 	private void loadImage(Image img) {
 		double priority = 0;
-		int id = 0;
 
 		if (img.filePath != null) {
 			// Decide whether a site contains correct token (image description)
 			priority = calculatePriority(img);
 
-			// Load the image, if it contains at least threshold token
-			if (priority >= this.minNumberOfTags) {
-
-				// check resolution
-				if (img.width < widthLimit || img.height < heightLimit)
-					return;
-
-				try {
-					downloadImage(img);
-				} catch (IOException e) {
-					System.err
-							.println("Counldn't load image!" + e.getMessage());
-					e.printStackTrace();
-				}
-
+			// Skip the image, if it doesn't match threshold tokens
+			if (priority < this.minNumberOfTags) {
+				printImageInformation(img, priority,
+						"Skipped: doesn't match priority");
+				return;
 			}
-			// Logging information to the current image
-			printImageInformation(img, priority);
+			// Skip the image, if it doesn't match the resolution
+			if (img.width < widthLimit || img.height < heightLimit) {
+				printImageInformation(img, priority,
+						"Skipped: wrong resolution.");
+				return;
+			}
 
+			// try to download the image
+			try {
+				downloadImage(img);
+
+				if (tagsToSymlinks) {
+					createSymlinks(img);
+				}
+			} catch (IOException e) {
+				printImageInformation(img, priority,
+						"Skipped: Couldn't load image!");
+				return;
+			}
+
+			// Logging information to the current image
+			printImageInformation(img, priority, "Got it!");
 		} else {
 			// Logging information to the current image
-			System.err.println("Filepath is null!");
+			printImageInformation(img, priority, "Skipped: Filepath is null!");
 		}
 
 	}
 
-	private void printImageInformation(Image img, double priority) {
+	private void printImageInformation(Image img, double priority,
+			String message) {
+		System.out.printf("> Found image #%d with priority %.1f. %s%n", img.id,
+				priority, message);
+	}
 
-		System.out.print("Current Image has ID:" + img.id + ", Priority: "
-				+ priority);
+	private void createSymlinks(Image img) {
+		String filepath = this.downloadPath.getAbsolutePath() + File.separator
+				+ img.fileName;
 
-		System.out
-				.println(" "
-						+ new Timestamp(Calendar.getInstance()
-								.getTimeInMillis()) + " ");
+		for (String tag : img.tagList) {
+			if (preferedToken.contains(tag)) {
+				File tagPath = createTagSubdirectory(tag);
+				Path original = Paths.get(filepath).toAbsolutePath();
+				Path link = Paths.get(
+						tagPath.toString() + File.separator + img.fileName)
+						.toAbsolutePath();
+				try {
+					Files.createSymbolicLink(link, original);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
 
+	private File createTagSubdirectory(String tag) {
+		File tagSubdirectory = new File(downloadPath, "by_tags");
+
+		if (!tagSubdirectory.exists()) {
+			tagSubdirectory.mkdir();
+		}
+
+		File tagPath = new File(tagSubdirectory, tag);
+
+		if (!tagPath.exists()) {
+			try {
+				tagPath.mkdir();
+			} catch (SecurityException e) {
+				System.err.println("Can't create directory at " + tagPath);
+				e.printStackTrace();
+			}
+		}
+
+		return tagPath;
 	}
 
 	public void setDownloadPath(String downloadPath) {
@@ -341,11 +405,14 @@ public class Loader {
 		} else {
 			try {
 				newDownloadPath.mkdir();
+				this.downloadPath = newDownloadPath;
 			} catch (SecurityException e) {
 				System.err.println("Can't create directory at " + downloadPath);
 				e.printStackTrace();
 			}
 		}
+
+		loadAlreadyDownloadedFiles();
 	}
 
 	public void setMinNumberOfTags(int threshold) {
@@ -419,4 +486,10 @@ public class Loader {
 		return widthLimit;
 	}
 
+	/**
+	 * @param tagsToSymlinks
+	 */
+	public void setTagsToSymlinks(Boolean tagsToSymlinks) {
+		this.tagsToSymlinks = tagsToSymlinks;
+	}
 }

@@ -1,5 +1,7 @@
 import java.awt.Color;
 import java.util.ArrayList;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -11,7 +13,7 @@ public class Image {
 	public String filePath;
 	public String fileName;
 
-	public ArrayList<String> tagList = new ArrayList<>();
+	public Set<String> tagList = new TreeSet<>();
 	public ArrayList<Color> colorList = new ArrayList<>();
 
 	public int id;
@@ -35,14 +37,12 @@ public class Image {
 			Document page = Jsoup.connect(imagePath).timeout(5000).get();
 			parseImagePage(page);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			System.err.println(e.getMessage());
 			e.printStackTrace();
 		}
 	}
 
 	private void parseImagePage(Document doc) throws Exception {
-
 		// Gather meta information
 		Element imageTag = doc.select("img[id=wallpaper]").first();
 
@@ -65,7 +65,5 @@ public class Image {
 
 			this.colorList.add(Color.decode(hexColorValue));
 		}
-
-		System.out.println("Found download link: " + filePath);
 	}
 }

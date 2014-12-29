@@ -24,9 +24,14 @@ public class Main {
 		parser.addArgument("-p", "--purity").type(String.class)
 				.setDefault("sfw");
 		parser.addArgument("-c", "--category")
-				// .action(Arguments.append())
 				.choices(new String[] { "all", "anime", "people", "general" })
 				.nargs("+").setDefault("all");
+
+		parser.addArgument("-o", "--output").type(String.class)
+				.setDefault("Download");
+		parser.addArgument("--tags-to-symlinks").type(Boolean.class)
+				.action(Arguments.storeTrue())
+				.setDefault(false);
 
 		parser.addArgument("--help").action(Arguments.help());
 
@@ -90,6 +95,12 @@ public class Main {
 			}
 			l.setCategoriesSubString(String.format("categories=%3s",
 					Integer.toBinaryString(cat)).replace(' ', '0'));
+
+			// set output path (and mkdir, if path doesn't exist)
+			l.setDownloadPath(pargs.getString("output"));
+
+			// activate / deactivate tag-to-symlink-feature
+			l.setTagsToSymlinks(pargs.getBoolean("tags_to_symlinks"));
 
 			// start loading!
 			l.startDownload();
