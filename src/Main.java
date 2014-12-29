@@ -19,7 +19,7 @@ public class Main {
 		parser.addArgument("-h", "--height").type(Integer.class).setDefault(0);
 
 		parser.addArgument("-t", "--type")
-				.choices(new String[] { "hot", "random", "latest" })
+				.choices(new String[] { "hot", "random", "latest", "search"})
 				.setDefault("hot");
 		parser.addArgument("-p", "--purity").type(String.class)
 				.setDefault("sfw");
@@ -32,6 +32,8 @@ public class Main {
 		parser.addArgument("--tags-to-symlinks").type(Boolean.class)
 				.action(Arguments.storeTrue())
 				.setDefault(false);
+		
+		parser.addArgument("-q", "--query").type(String.class).setDefault("");
 
 		parser.addArgument("--help").action(Arguments.help());
 
@@ -42,7 +44,7 @@ public class Main {
 			// set desired width and height
 			l.setHeightLimit(pargs.getInt("height"));
 			l.setWidthLimit(pargs.getInt("width"));
-
+			
 			// set desired type
 			switch (pargs.getString("type")) {
 			case "random":
@@ -52,6 +54,9 @@ public class Main {
 			case "latest":
 				l.setSearchSubString("/latest?");
 				l.setSortingSubString("");
+				break;
+			case "search":
+				l.setSearchSubString("/search?q=" + pargs.get("query") + "&");
 				break;
 			default:
 				l.setSearchSubString("/search?");
