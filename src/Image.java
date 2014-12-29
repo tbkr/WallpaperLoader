@@ -23,7 +23,7 @@ public class Image {
 	/**
 	 * Constructor for a website which holds the link to the image with id
 	 * <em>id<em>
-	 * 
+	 *
 	 * @param id
 	 */
 	public Image(Integer id) {
@@ -38,7 +38,7 @@ public class Image {
 			parseImagePage(page);
 		} catch (Exception e) {
 			System.err.println(e.getMessage());
-//			e.printStackTrace();
+			// e.printStackTrace();
 		}
 	}
 
