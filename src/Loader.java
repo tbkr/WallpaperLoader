@@ -49,10 +49,10 @@ public class Loader {
 
 	private String sortingSubString = new String("sorting=views");
 	private int widthLimit = 0;
-	
+
 	private ArrayList<String> preferedToken = new ArrayList<>();
 	private ArrayList<Color> preferedColor = new ArrayList<>();
-	
+
 	public Loader() {
 		String[] preferedToken = { "abstract", "sunset", "mountains",
 				"landscape", "skyscape", "cityscape", "landscapes",
@@ -102,6 +102,72 @@ public class Loader {
 	}
 
 	/**
+	 * Starts parsing the "hotpage" of wallhaven.cc. This is the latest site *
+	 * sorted after SFW and views of the images.
+	 */
+	public void findNewWallpaperOnHotPage() {
+		String parsingURL = mainSiteURL + searchSubString + categoriesSubString
+				+ concatSubString + puritySubString + concatSubString
+				+ sortingSubString + concatSubString + orderSubString;
+	
+		for (File f : this.downloadPath.listFiles(new JPGAndPNGFileFilter())) {
+			// Add the names to the idList (the names are the ids of the images)
+			String fileName = f.getName();
+			this.idList.add(Integer.parseInt(fileName.substring(0,
+					fileName.length() - 4)));
+		}
+	
+		System.out.println("Download started with the following URL: "
+				+ parsingURL);
+	
+		// try to get total number of pages
+		int lastPage;
+		try {
+			Document doc = Jsoup
+					.connect(parsingURL + concatSubString + siteSubString + 1)
+					.timeout(5000).get();
+			lastPage = Integer.parseInt(doc
+					.select("span[class=thumb-listing-page-total]").first()
+					.text().substring(2));
+		} catch (Exception e) {
+			lastPage = 3000000;
+		}
+	
+		for (int index = 1; index < lastPage; ++index) {
+			try {
+				Document doc = Jsoup.connect(
+						parsingURL + concatSubString + siteSubString + index)
+						.get();
+	
+				for (Integer id : getImageIdsFromContent(doc)) {
+					if (!alreadyDownloaded(id)) {
+						loadImage(new Image(id));
+					} else {
+						System.out.println("Already owning Image with Id: "
+								+ id);
+					}
+				}
+	
+				System.out.println("Current Page:" + index);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	
+	}
+
+	/**
+	 * Create download directory and start loading!
+	 */
+	public void startDownload() {
+		if (!this.downloadPath.exists()) {
+			this.downloadPath.mkdir();
+		}
+	
+		findNewWallpaperOnHotPage();
+	}
+
+	/**
 	 * Check whether a given id has already been downloaded and return the the
 	 * result.
 	 * 
@@ -119,50 +185,52 @@ public class Loader {
 	}
 
 	private double[] rgbToYUV(Color c) {
-		
+
 		double[] res = new double[3];
-		
+
 		int r = c.getRed();
 		int g = c.getGreen();
 		int b = c.getBlue();
-		
+
 		double y = 0.2126 * r + 0.7152 * g + 0.0722 * b;
 		double u = -0.09991 * r - 0.33609 * g + 0.436 * b;
 		double v = 0.615 * r - 0.55861 * g - 0.05639 * b;
-		
+
 		res[0] = y;
 		res[1] = u;
 		res[2] = v;
-		
+
 		return res;
 	}
-	
+
 	private double calculatePriority(Image img) {
 		int feasibleToken = 0;
-		
-		for(Color c : this.preferedColor) {
-			
+
+		for (Color c : this.preferedColor) {
+
 			// Convert to YUV to use euclidean distance as measurement
 			double[] vuyPrefered = rgbToYUV(c);
-			
-			for(Color d : img.colorList) {
-				
+
+			for (Color d : img.colorList) {
+
 				double[] vuyImage = rgbToYUV(d);
-				
-				double dist2 = (vuyImage[0] - vuyPrefered[0]) * (vuyImage[0] - vuyPrefered[0]);
-				dist2 += (vuyImage[1] - vuyPrefered[1]) * (vuyImage[1] - vuyPrefered[1]);
-				dist2 += (vuyImage[2] - vuyPrefered[2]) * (vuyImage[2] - vuyPrefered[2]);
-				
+
+				double dist2 = (vuyImage[0] - vuyPrefered[0])
+						* (vuyImage[0] - vuyPrefered[0]);
+				dist2 += (vuyImage[1] - vuyPrefered[1])
+						* (vuyImage[1] - vuyPrefered[1]);
+				dist2 += (vuyImage[2] - vuyPrefered[2])
+						* (vuyImage[2] - vuyPrefered[2]);
+
 				// TODO: Get a good measure for similiar
 				// and get a measurement between 0 and 1
 				// If colors are similar
-				if(Math.sqrt(dist2) < 0.25) {
+				if (Math.sqrt(dist2) < 0.25) {
 					feasibleToken++;
 				}
-				
-				
+
 			}
-			
+
 		}
 
 		// TODO: Replace with a better scheme
@@ -237,10 +305,10 @@ public class Loader {
 				try {
 					downloadImage(img);
 				} catch (IOException e) {
-					System.err.println("Counldn't load image!" + e.getMessage());
+					System.err
+							.println("Counldn't load image!" + e.getMessage());
 					e.printStackTrace();
 				}
-
 
 			}
 			// Logging information to the current image
@@ -263,72 +331,6 @@ public class Loader {
 						+ new Timestamp(Calendar.getInstance()
 								.getTimeInMillis()) + " ");
 
-	}
-
-	/**
-	 * Starts parsing the "hotpage" of wallhaven.cc.
-     * This is the latest site * sorted after SFW and views of the images.
-	 */
-	public void findNewWallpaperOnHotPage() {
-		String parsingURL = mainSiteURL + searchSubString + categoriesSubString
-				+ concatSubString + puritySubString + concatSubString
-				+ sortingSubString + concatSubString + orderSubString;
-	
-		for (File f : this.downloadPath.listFiles(new JPGAndPNGFileFilter())) {
-			// Add the names to the idList (the names are the ids of the images)
-			String fileName = f.getName();
-			this.idList.add(Integer.parseInt(fileName.substring(0,
-					fileName.length() - 4)));
-		}
-	
-		
-		System.out.println("Download started with the following URL: "+ parsingURL);
-	
-		// try to get total number of pages
-		int lastPage;
-		try {
-			Document doc = Jsoup
-					.connect(parsingURL + concatSubString + siteSubString + 1)
-					.timeout(5000).get();
-			lastPage = Integer.parseInt(doc
-					.select("span[class=thumb-listing-page-total]").first()
-					.text().substring(2));
-		} catch (Exception e) {
-			lastPage = 3000000;
-		}
-	
-		for (int index = 1; index < lastPage; ++index) {
-			try {
-				Document doc = Jsoup.connect(
-						parsingURL + concatSubString + siteSubString + index)
-						.get();
-	
-				for (Integer id : getImageIdsFromContent(doc)) {
-					if (!alreadyDownloaded(id)) {
-						loadImage(new Image(id));
-					} else {
-						System.out
-								.println("Already owning Image with Id: " + id);
-					}
-				}
-	
-				System.out.println("Current Page:" + index);
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-	
-	}
-
-	/**
-	 * Create download directory and start loading!
-	 */
-	public void startDownload() {
-		if (!this.downloadPath.exists()) {
-			this.downloadPath.mkdir();
-		}
-	
-		findNewWallpaperOnHotPage();
 	}
 
 	public void setDownloadPath(String downloadPath) {
@@ -376,34 +378,6 @@ public class Loader {
 	}
 
 	/**
-	 * @param heightLimit the heightLimit to set
-	 */
-	public void setHeightLimit(int heightLimit) {
-		this.heightLimit = heightLimit;
-	}
-
-	/**
-	 * @param widthLimit the widthLimit to set
-	 */
-	public void setWidthLimit(int widthLimit) {
-		this.widthLimit = widthLimit;
-	}
-
-	/**
-	 * @return the heightLimit
-	 */
-	public int getHeightLimit() {
-		return heightLimit;
-	}
-
-	/**
-	 * @return the widthLimit
-	 */
-	public int getWidthLimit() {
-		return widthLimit;
-	}
-
-	/**
 	 * @param categoriesSubString the categoriesSubString to set
 	 */
 	public void setCategoriesSubString(String categoriesSubString) {
@@ -416,7 +390,33 @@ public class Loader {
 	public void setPuritySubString(String puritySubString) {
 		this.puritySubString = puritySubString;
 	}
-	
 
+	/**
+	 * @param heightLimit the heightLimit to set
+	 */
+	public void setHeightLimit(int heightLimit) {
+		this.heightLimit = heightLimit;
+	}
+
+	/**
+	 * @return the heightLimit
+	 */
+	public int getHeightLimit() {
+		return heightLimit;
+	}
+
+	/**
+	 * @param widthLimit the widthLimit to set
+	 */
+	public void setWidthLimit(int widthLimit) {
+		this.widthLimit = widthLimit;
+	}
+
+	/**
+	 * @return the widthLimit
+	 */
+	public int getWidthLimit() {
+		return widthLimit;
+	}
 
 }

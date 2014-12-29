@@ -17,7 +17,6 @@ public class Image {
 	public int id;
 	public int width;
 	public int height;
-	
 
 	/**
 	 * Constructor for a website which holds the link to the image with id
@@ -55,17 +54,18 @@ public class Image {
 		for (Element el : doc.select("a[class=tagname]")) {
 			tagList.add(el.text());
 		}
-		
-		Element colorPalette = doc.select("ul[class=sidebare-section color-palette]").first();
+
+		Element colorPalette = doc.select(
+				"ul[class=sidebare-section color-palette]").first();
 		Elements colors = colorPalette.select("li[class=color]");
-		
-		for(Element color : colors) {
+
+		for (Element color : colors) {
 			String tmp = color.attr("style");
 			String hexColorValue = tmp.split(":")[1];
-			
+
 			this.colorList.add(Color.decode(hexColorValue));
 		}
-		
+
 		System.out.println("Found download link: " + filePath);
 	}
 }
