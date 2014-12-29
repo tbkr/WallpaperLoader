@@ -1,3 +1,4 @@
+import java.awt.Color;
 import java.util.ArrayList;
 
 import org.jsoup.Jsoup;
@@ -11,7 +12,7 @@ public class Image {
 	public String fileName;
 
 	public ArrayList<String> tagList = new ArrayList<>();
-	public ArrayList<String> colorList = new ArrayList<>();
+	public ArrayList<Color> colorList = new ArrayList<>();
 
 	public int id;
 	public int width;
@@ -60,7 +61,9 @@ public class Image {
 		
 		for(Element color : colors) {
 			String tmp = color.attr("style");
-			this.colorList.add(tmp.split(":")[1]);
+			String hexColorValue = tmp.split(":")[1];
+			
+			this.colorList.add(Color.decode(hexColorValue));
 		}
 		
 		System.out.println("Found download link: " + filePath);

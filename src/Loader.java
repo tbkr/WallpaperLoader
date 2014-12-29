@@ -1,3 +1,4 @@
+import java.awt.Color;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileOutputStream;
@@ -41,7 +42,6 @@ public class Loader {
 	private String mainSiteURL = new String("http://alpha.wallhaven.cc");
 	private int minNumberOfTags;
 	private String orderSubString = new String("order=desc");
-	private ArrayList<String> preferedToken = new ArrayList<>();;
 	private String puritySubString = new String("purity=100");
 
 	private String searchSubString = new String("/search?");
@@ -49,6 +49,10 @@ public class Loader {
 
 	private String sortingSubString = new String("sorting=views");
 	private int widthLimit = 0;
+	
+	private ArrayList<String> preferedToken = new ArrayList<>();
+	private ArrayList<Color> preferedColor = new ArrayList<>();
+	
 	public Loader() {
 		String[] preferedToken = { "abstract", "sunset", "mountains",
 				"landscape", "skyscape", "cityscape", "landscapes",
@@ -114,10 +118,55 @@ public class Loader {
 		return false;
 	}
 
-	private int calculatePriority(ArrayList<String> tagList) {
+	private double[] rgbToYUV(Color c) {
+		
+		double[] res = new double[3];
+		
+		int r = c.getRed();
+		int g = c.getGreen();
+		int b = c.getBlue();
+		
+		double y = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+		double u = -0.09991 * r - 0.33609 * g + 0.436 * b;
+		double v = 0.615 * r - 0.55861 * g - 0.05639 * b;
+		
+		res[0] = y;
+		res[1] = u;
+		res[2] = v;
+		
+		return res;
+	}
+	
+	private double calculatePriority(Image img) {
 		int feasibleToken = 0;
+		
+		for(Color c : this.preferedColor) {
+			
+			// Convert to YUV to use euclidean distance as measurement
+			double[] vuyPrefered = rgbToYUV(c);
+			
+			for(Color d : img.colorList) {
+				
+				double[] vuyImage = rgbToYUV(d);
+				
+				double dist2 = (vuyImage[0] - vuyPrefered[0]) * (vuyImage[0] - vuyPrefered[0]);
+				dist2 += (vuyImage[1] - vuyPrefered[1]) * (vuyImage[1] - vuyPrefered[1]);
+				dist2 += (vuyImage[2] - vuyPrefered[2]) * (vuyImage[2] - vuyPrefered[2]);
+				
+				// TODO: Get a good measure for similiar
+				// and get a measurement between 0 and 1
+				// If colors are similar
+				if(Math.sqrt(dist2) < 0.25) {
+					feasibleToken++;
+				}
+				
+				
+			}
+			
+		}
 
-		for (String token : tagList) {
+		// TODO: Replace with a better scheme
+		for (String token : img.tagList) {
 			if (this.preferedToken.contains(token)) {
 				feasibleToken++;
 			}
@@ -171,12 +220,12 @@ public class Loader {
 	 * @return void
 	 */
 	private void loadImage(Image img) {
-		int priority = 0;
+		double priority = 0;
 		int id = 0;
 
 		if (img.filePath != null) {
 			// Decide whether a site contains correct token (image description)
-			priority = calculatePriority(img.tagList);
+			priority = calculatePriority(img);
 
 			// Load the image, if it contains at least threshold token
 			if (priority >= this.minNumberOfTags) {
@@ -204,7 +253,7 @@ public class Loader {
 
 	}
 
-	private void printImageInformation(Image img, int priority) {
+	private void printImageInformation(Image img, double priority) {
 
 		System.out.print("Current Image has ID:" + img.id + ", Priority: "
 				+ priority);
@@ -217,8 +266,8 @@ public class Loader {
 	}
 
 	/**
-	 * Starts parsing the "hotpage" of wallhaven.cc. This is the latest site
-	 * sorted after SFW and views of the images.
+	 * Starts parsing the "hotpage" of wallhaven.cc.
+     * This is the latest site * sorted after SFW and views of the images.
 	 */
 	public void findNewWallpaperOnHotPage() {
 		String parsingURL = mainSiteURL + searchSubString + categoriesSubString
