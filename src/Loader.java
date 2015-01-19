@@ -182,12 +182,16 @@ public class Loader {
 		List<Integer> ids = new LinkedList<Integer>();
 		try {
 			String pageURL = url + concatSubString + siteSubString + pageNumber;
-			Document doc = Jsoup.connect(pageURL).get();
+			String userAgent = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X; de-de) AppleWebKit/523.10.3 (KHTML, like Gecko) Version/3.0.4 Safari/523.10";
+			int timeOut = 30000;
+			
+			Document doc = Jsoup.connect(pageURL).userAgent(userAgent).timeout(timeOut).get();
 
 			for (Integer id : getImageIdsFromContent(doc)) {
 				ids.add(id);
 			}
 		} catch (IOException e) {
+			System.out.println(e);
 			System.out.printf("Couldn't get page content. Skipping page %d.%n",
 					pageNumber);
 		}
