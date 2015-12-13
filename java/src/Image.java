@@ -23,7 +23,7 @@ public class Image {
 	/**
 	 * Constructor for a website which holds the link to the image with id
 	 * <em>id<em>
-	 * 
+	 *
 	 * @param id
 	 */
 	public Image(Integer id) {
@@ -34,11 +34,13 @@ public class Image {
 
 	private void collectFurtherInformationForImage(String imagePath) {
 		try {
-			Document page = Jsoup.connect(imagePath).timeout(5000).get();
+			String userAgent = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X; de-de) AppleWebKit/523.10.3 (KHTML, like Gecko) Version/3.0.4 Safari/523.10";
+			int timeOut = 10000;
+			Document page = Jsoup.connect(imagePath).userAgent(userAgent).timeout(timeOut).get();
 			parseImagePage(page);
 		} catch (Exception e) {
 			System.err.println(e.getMessage());
-//			e.printStackTrace();
+			// e.printStackTrace();
 		}
 	}
 

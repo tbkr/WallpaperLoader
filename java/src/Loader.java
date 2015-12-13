@@ -33,23 +33,23 @@ public class Loader {
 		}
 	}
 
-	private String categoriesSubString = new String("categories=111");
-	private String concatSubString = new String("&");
+	private String categoriesSubString = "categories=111";
+	private String concatSubString = "&";
 	private File downloadPath;
 
 	private int heightLimit = 0;
 
 	private ArrayList<Integer> idList = new ArrayList<>();
 
-	private String mainSiteURL = new String("http://alpha.wallhaven.cc");
+	private String mainSiteURL = "http://alpha.wallhaven.cc";
 	private int minNumberOfTags;
-	private String orderSubString = new String("order=desc");
-	private String puritySubString = new String("purity=100");
+	private String orderSubString = "order=desc";
+	private String puritySubString = "purity=100";
 
-	private String searchSubString = new String("/search?");
-	private String siteSubString = new String("page=");
+	private String searchSubString = "/search?";
+	private String siteSubString = "page=";
 
-	private String sortingSubString = new String("sorting=views");
+	private String sortingSubString = "sorting=views";
 	private int widthLimit = 0;
 
 	private boolean tagsToSymlinks;
@@ -58,14 +58,14 @@ public class Loader {
 	private ArrayList<Color> preferedColor = new ArrayList<>();
 
 	public Loader() {
-		String[] preferedToken = { "abstract", "sunset", "mountains",
+		String[] preferedToken = {"abstract", "sunset", "mountains",
 				"landscape", "skyscape", "cityscape", "landscapes",
 				"cityscapes", "graph", "computer science", "stars",
 				"outer space", "galaxies", "beach", "beaches", "water",
 				"nature", "fields", "sunlight", "depth of field", "skyscape",
 				"shadow", "clouds", "bokeh", "lenses", "wireframes",
 				"wireframe", "science", "minimal", "minimalism", "space",
-				"skies", "macro", "closeup" };
+				"skies", "macro", "closeup"};
 
 		setPreferedToken(preferedToken);
 	}
@@ -73,7 +73,7 @@ public class Loader {
 	/**
 	 * Constructor taking an array of strings as tags. These tags are preferred
 	 * and will be used to decide whether an image is "prefered" or not.
-	 * 
+	 *
 	 * @param token
 	 */
 	public Loader(String[] token) {
@@ -87,7 +87,7 @@ public class Loader {
 	 * and will be used to decide whether an image is "prefered" or not. The
 	 * threshhold is the number of prefered tags an image has to have to get
 	 * downloaded.
-	 * 
+	 *
 	 * @param token
 	 * @param threshhold
 	 */
@@ -174,7 +174,7 @@ public class Loader {
 
 	/**
 	 * Get the ID's of all images on one specific page.
-	 * 
+	 *
 	 * @param url
 	 * @param pageNumber
 	 */
@@ -182,12 +182,16 @@ public class Loader {
 		List<Integer> ids = new LinkedList<Integer>();
 		try {
 			String pageURL = url + concatSubString + siteSubString + pageNumber;
-			Document doc = Jsoup.connect(pageURL).get();
+			String userAgent = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X; de-de) AppleWebKit/523.10.3 (KHTML, like Gecko) Version/3.0.4 Safari/523.10";
+			int timeOut = 30000;
+			
+			Document doc = Jsoup.connect(pageURL).userAgent(userAgent).timeout(timeOut).get();
 
 			for (Integer id : getImageIdsFromContent(doc)) {
 				ids.add(id);
 			}
 		} catch (IOException e) {
+			System.out.println(e);
 			System.out.printf("Couldn't get page content. Skipping page %d.%n",
 					pageNumber);
 		}
@@ -197,7 +201,7 @@ public class Loader {
 	/**
 	 * Check whether a given id has already been downloaded and return the the
 	 * result.
-	 * 
+	 *
 	 * @param id
 	 * @return boolean
 	 */
@@ -266,27 +270,38 @@ public class Loader {
 
 	/**
 	 * Downloads the image to the download location
-	 * 
+	 *
 	 * @param img
 	 * @throws IOException
 	 */
 	private void downloadImage(Image img) throws IOException {
 		URL url = new URL(img.filePath);
+		InputStream is = null;
+		OutputStream os = null;
 
-		InputStream is = url.openStream();
-		OutputStream os = new FileOutputStream(
-				this.downloadPath.getAbsolutePath() + File.separator
-						+ img.fileName);
+		try {
+			is = url.openStream();
+			os = new FileOutputStream(this.downloadPath.getAbsolutePath()
+					+ File.separator + img.fileName);
 
-		byte[] b = new byte[2048];
-		int length;
+			byte[] b = new byte[2048];
+			int length;
 
-		while ((length = is.read(b)) != -1) {
-			os.write(b, 0, length);
+			while ((length = is.read(b)) != -1) {
+				os.write(b, 0, length);
+			}
+		} catch (IOException e) {
+			throw e;
+		} finally {
+			try {
+				if (null != os)
+					os.close();
+				if (null != is)
+					is.close();
+			} catch (IOException e) {
+				return;
+			}
 		}
-
-		is.close();
-		os.close();
 	}
 
 	private LinkedList<Integer> getImageIdsFromContent(Document doc) {
@@ -295,7 +310,7 @@ public class Loader {
 		for (Element el : doc.body().select("a[class=preview]")) {
 			String url = el.attr("href");
 			String id = url.substring(url.lastIndexOf('/') + 1, url.length());
-			ids.push(new Integer(id));
+			ids.push(Integer.valueOf(id));
 		}
 
 		return ids;
@@ -304,7 +319,7 @@ public class Loader {
 	/**
 	 * Check the filePath and the priority and download the image if the
 	 * priority is larger or equals the threshold.
-	 * 
+	 *
 	 * @param img
 	 * @return void
 	 */
@@ -421,7 +436,7 @@ public class Loader {
 
 	/**
 	 * Setter method for the prefered token list
-	 * 
+	 *
 	 * @param preferedToken void
 	 */
 	public void setPreferedToken(String[] preferedToken) {

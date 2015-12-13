@@ -19,20 +19,19 @@ public class Main {
 		parser.addArgument("-h", "--height").type(Integer.class).setDefault(0);
 
 		parser.addArgument("-t", "--type")
-				.choices(new String[] { "hot", "random", "latest", "search"})
+				.choices(new String[] {"hot", "random", "latest", "search"})
 				.setDefault("hot");
 		parser.addArgument("-p", "--purity").type(String.class)
 				.setDefault("sfw");
 		parser.addArgument("-c", "--category")
-				.choices(new String[] { "all", "anime", "people", "general" })
+				.choices(new String[] {"all", "anime", "people", "general"})
 				.nargs("+").setDefault("all");
 
 		parser.addArgument("-o", "--output").type(String.class)
 				.setDefault("Download");
 		parser.addArgument("--tags-to-symlinks").type(Boolean.class)
-				.action(Arguments.storeTrue())
-				.setDefault(false);
-		
+				.action(Arguments.storeTrue()).setDefault(false);
+
 		parser.addArgument("-q", "--query").type(String.class).setDefault("");
 
 		parser.addArgument("--help").action(Arguments.help());
@@ -44,7 +43,7 @@ public class Main {
 			// set desired width and height
 			l.setHeightLimit(pargs.getInt("height"));
 			l.setWidthLimit(pargs.getInt("width"));
-			
+
 			// set desired type
 			switch (pargs.getString("type")) {
 			case "random":

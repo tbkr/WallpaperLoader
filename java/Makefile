@@ -23,5 +23,8 @@ jar: binaries $(CLASSES:.java=.class); \
 	jar cmf ../Manifest.mf ../WallpaperLoader.jar *.class; \
 	cd ..
 
+findbugs: jar; \
+	findbugs WallpaperLoader.jar
+
 clean:
 	$(RM) -r ./bin/*.class
